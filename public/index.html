@@ -8,6 +8,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+// Registra il plugin annotation esplicitamente
+if(window.Chart && window.ChartAnnotation){
+  Chart.register(window.ChartAnnotation);
+}
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
 :root{--bg:#0a0f14;--surface:rgba(18,26,34,0.85);--border:rgba(255,255,255,0.09);--text:#e8eff6;--muted:#7a8fa0;--accent:#e8873a;--green:#4caf7d;--blue:#6ab0d4;--red:#e05a4e;--rock:#8fa3b0;}
@@ -618,15 +624,31 @@ function initChart(chartId, athlete, gpx, gpsIdx){
   const chart = new Chart(canvas, {
     type:'line',
     data:{
-      datasets:[{
-        data: profileData,
-        borderColor: athlete.color,
-        borderWidth: 2,
-        fill: true,
-        backgroundColor: `${athlete.color}22`,
-        pointRadius: 0,
-        tension: 0.3,
-      }]
+      datasets:[
+        {
+          // Profilo altimetrico
+          data: profileData,
+          borderColor: athlete.color,
+          borderWidth: 2,
+          fill: true,
+          backgroundColor: `${athlete.color}22`,
+          pointRadius: 0,
+          tension: 0.3,
+          order: 2,
+        },
+        ...(posKm !== null ? [{
+          // Puntino posizione atleta — scatter sovrapposto
+          type: 'scatter',
+          data: [{ x: posKm, y: posEle }],
+          pointRadius: 8,
+          pointHoverRadius: 10,
+          pointBackgroundColor: athlete.color,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2.5,
+          showLine: false,
+          order: 1,
+        }] : []),
+      ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -634,24 +656,13 @@ function initChart(chartId, athlete, gpx, gpsIdx){
       plugins:{
         legend:{display:false},
         tooltip:{
+          filter: ctx => ctx.datasetIndex === 0,
           callbacks:{
             title: ctx => `km ${ctx[0].parsed.x.toFixed(1)}`,
             label: ctx => `${Math.round(ctx.parsed.y)}m slm`
           }
         },
-        annotation:{
-          annotations: posKm !== null ? {
-            dot:{
-              type:'point',
-              xValue: posKm,
-              yValue: posEle,
-              backgroundColor: athlete.color,
-              borderColor:'#ffffff',
-              borderWidth: 2.5,
-              radius: 7,
-            }
-          } : {}
-        },
+        annotation:{},
       },
       scales:{
         x:{
