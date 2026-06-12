@@ -4,19 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DXT 2026 · Tracker Amici</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
-:root {
-  --bg:#0a0f14; --surface:rgba(18,26,34,0.82); --border:rgba(255,255,255,0.09);
-  --text:#e8eff6; --muted:#7a8fa0; --accent:#e8873a; --green:#4caf7d;
-  --blue:#6ab0d4; --red:#e05a4e; --rock:#8fa3b0;
-}
+:root{--bg:#0a0f14;--surface:rgba(18,26,34,0.85);--border:rgba(255,255,255,0.09);--text:#e8eff6;--muted:#7a8fa0;--accent:#e8873a;--green:#4caf7d;--blue:#6ab0d4;--red:#e05a4e;--rock:#8fa3b0;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;position:relative;}
 body::before{content:'';position:fixed;inset:0;background-image:url('/civetta.jpg');background-size:cover;background-position:center 30%;background-attachment:fixed;filter:brightness(0.18) saturate(0.5) sepia(0.3);z-index:0;}
-body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(100,130,150,0.06) 0%,transparent 70%),linear-gradient(to bottom,rgba(10,15,20,0.55) 0%,rgba(10,15,20,0.2) 40%,rgba(10,15,20,0.6) 100%);z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:linear-gradient(to bottom,rgba(10,15,20,0.55) 0%,rgba(10,15,20,0.2) 40%,rgba(10,15,20,0.6) 100%);z-index:0;}
 header,main{position:relative;z-index:1;}
-header{border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;background:rgba(8,13,18,0.9);backdrop-filter:blur(12px);z-index:100;}
+header{border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;background:rgba(8,13,18,0.92);backdrop-filter:blur(12px);z-index:100;}
 .logo{font-weight:900;font-size:20px;letter-spacing:-0.5px;color:var(--accent);}
 .logo span{color:var(--text);}
 .logo-sub{font-size:10px;color:var(--rock);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
@@ -31,10 +30,11 @@ header{border-bottom:1px solid var(--border);padding:14px 20px;display:flex;alig
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
 .status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pdot 2s infinite;}
 @keyframes pdot{0%,100%{opacity:1}50%{opacity:0.4}}
-main{padding:20px;max-width:960px;margin:0 auto;}
-.cards-grid{display:grid;gap:14px;}
-.athlete-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);transition:border-color 0.3s,box-shadow 0.3s;box-shadow:0 4px 24px rgba(0,0,0,0.4);}
-.athlete-card:hover{box-shadow:0 6px 32px rgba(0,0,0,0.55);}
+main{padding:20px;max-width:1000px;margin:0 auto;}
+.cards-grid{display:grid;gap:16px;}
+
+/* CARD */
+.athlete-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(0,0,0,0.4);transition:border-color 0.3s;}
 .athlete-card.finished{border-color:rgba(76,175,125,0.5);}
 .athlete-card.dnf{border-color:rgba(224,90,78,0.4);opacity:0.7;}
 .card-header{padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
@@ -47,23 +47,36 @@ main{padding:20px;max-width:960px;margin:0 auto;}
 .status-done{background:rgba(76,175,125,0.18);color:var(--green);}
 .status-dnf{background:rgba(224,90,78,0.18);color:var(--red);}
 .status-wait{background:rgba(122,143,160,0.18);color:var(--muted);}
-.card-progress{padding:14px 16px;border-bottom:1px solid var(--border);}
-.progress-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;}
+
+/* GPS row */
+.card-gps-row{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px;}
+.gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.gps-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);animation:pdot 2s infinite;}
+.gps-text{flex:1;color:var(--muted);}
+.gps-text strong{color:var(--text);}
+.gps-coords{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--rock);}
+.btn-sm{font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;padding:3px 8px;border:1px solid rgba(106,176,212,0.3);border-radius:4px;background:rgba(106,176,212,0.08);white-space:nowrap;cursor:pointer;}
+.btn-sm:hover{background:rgba(106,176,212,0.18);}
+
+/* MAP */
+.card-map-wrap{position:relative;}
+.card-map{height:260px;width:100%;background:#0d1a24;}
+.map-toggle-btn{position:absolute;top:8px;right:8px;z-index:500;background:rgba(8,13,18,0.85);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;}
+
+/* ELEVATION */
+.card-elevation{padding:12px 16px;border-top:1px solid var(--border);}
+.elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.elevation-chart-wrap{height:80px;position:relative;}
+
+/* PROGRESS */
+.card-progress{padding:12px 16px;border-top:1px solid var(--border);}
+.progress-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:flex;justify-content:space-between;}
 .progress-label strong{color:var(--text);font-weight:600;}
-.progress-bar-wrap{background:rgba(255,255,255,0.08);border-radius:4px;height:6px;overflow:hidden;}
-.progress-bar{height:6px;border-radius:4px;background:var(--accent);transition:width 0.6s ease;min-width:0;}
+.progress-bar-wrap{background:rgba(255,255,255,0.08);border-radius:4px;height:5px;overflow:hidden;}
+.progress-bar{height:5px;border-radius:4px;background:var(--accent);transition:width 0.6s ease;}
 .progress-bar.done{background:var(--green);}
 
-/* GPS live row */
-.card-gps{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-.gps-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
-.gps-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);animation:pdot 2s infinite;}
-.gps-info{flex:1;font-size:12px;color:var(--muted);}
-.gps-info strong{color:var(--text);}
-.gps-coords{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--rock);}
-.gps-map-link{font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;padding:4px 10px;border:1px solid rgba(106,176,212,0.3);border-radius:5px;background:rgba(106,176,212,0.08);white-space:nowrap;}
-.gps-map-link:hover{background:rgba(106,176,212,0.18);}
-
+/* SPLITS */
 .card-splits{padding:12px 16px 14px;}
 .splits-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
 .splits-timeline{display:flex;align-items:flex-start;overflow-x:auto;padding-bottom:4px;}
@@ -80,11 +93,20 @@ main{padding:20px;max-width:960px;margin:0 auto;}
 .card-stats{padding:0 16px 14px;display:flex;gap:20px;flex-wrap:wrap;}
 .stat{display:flex;flex-direction:column;gap:2px;}
 .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
-.stat-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text);}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;}
 .stat-value.hi{color:var(--accent);}
 .last-update{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;padding-bottom:40px;font-family:'JetBrains Mono',monospace;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .spinning{display:inline-block;animation:spin 0.8s linear infinite;}
+
+/* Leaflet dark overrides */
+.leaflet-container{background:#0d1a24;}
+.leaflet-popup-content-wrapper{background:rgba(18,26,34,0.95);border:1px solid rgba(255,255,255,0.15);color:var(--text);border-radius:8px;}
+.leaflet-popup-tip{background:rgba(18,26,34,0.95);}
+.leaflet-popup-content{margin:10px 14px;font-family:'Inter',sans-serif;font-size:13px;}
+.popup-bib{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;}
+.popup-row{font-size:12px;color:var(--muted);margin-top:3px;}
+.popup-row strong{color:var(--text);}
 </style>
 </head>
 <body>
@@ -109,26 +131,26 @@ main{padding:20px;max-width:960px;margin:0 auto;}
     <div style="text-align:center;padding:80px 20px;color:var(--muted)">
       <div style="font-size:48px;margin-bottom:16px">⛰️</div>
       <div style="font-size:17px;color:var(--text);font-weight:600;margin-bottom:8px">DXT 2026 · Tracker</div>
-      <div style="color:var(--rock)">Premi Aggiorna per caricare i dati in tempo reale</div>
+      <div style="color:var(--rock)">Premi Aggiorna per caricare posizioni e dati live</div>
     </div>
   </div>
   <div class="last-update" id="lastUpdate"></div>
 </main>
 <script>
 const ATHLETES = [
-  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423",
+  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", gpxFile:"103k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,11,38,62,84,103], totalKm:103 },
-  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424",
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424",
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425",
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
-  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425",
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
 ];
@@ -139,193 +161,358 @@ const INTER_LISTS = {
   "3":[{list:"RESULT PRESENTER|Inter1_all_new",label:"Passo Duran"},{list:"RESULT PRESENTER|Inter3_all_new",label:"Passo Staulanza"}],
 };
 
-// Cache GPS per evento (evita chiamate duplicate per stessa gara)
-let gpsCache = {};
-let autoRefresh=false, autoTimer=null;
+// Cache
+let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {};
+let autoRefresh = false, autoTimer = null;
+let startTimes = {};  // bib -> timestamp partenza stimata
 
-async function fetchProxy(listname,contest,bib){
-  const r=await fetch(`/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`);
+async function fetchProxy(listname, contest, bib){
+  const r = await fetch(`/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`);
   if(!r.ok) throw new Error("HTTP "+r.status);
   return r.json();
 }
 
 async function fetchGPS(eventId){
-  if(gpsCache[eventId]) return gpsCache[eventId];
-  const r=await fetch(`/api/raceresult?action=gps&eventId=${eventId}`);
-  if(!r.ok) return null;
-  const data=await r.json();
-  // Indicizza per pettorale
-  const byBib={};
-  for(const p of (data.data||[])) byBib[String(p.la)]=p;
-  gpsCache[eventId]=byBib;
+  const r = await fetch(`/api/raceresult?action=gps&eventId=${eventId}`);
+  if(!r.ok) return {};
+  const data = await r.json();
+  const byBib = {};
+  for(const p of (data.data||[])) byBib[String(p.la)] = p;
+  gpsCache[eventId] = byBib;
   return byBib;
 }
 
-function findBib(data,bib){
+async function fetchGPX(raceName){
+  if(gpxCache[raceName]) return gpxCache[raceName];
+  const r = await fetch(`/gpx-${raceName}.json`);
+  if(!r.ok) return null;
+  const pts = await r.json();  // [[lat,lng,ele,distM], ...]
+  gpxCache[raceName] = pts;
+  return pts;
+}
+
+function findBib(data, bib){
   if(!data) return null;
   for(const gk of Object.keys(data)){
-    const g=data[gk];
-    if(typeof g==="object"&&!Array.isArray(g)){
+    const g = data[gk];
+    if(typeof g === "object" && !Array.isArray(g)){
       for(const sk of Object.keys(g)){
-        const rows=g[sk];
+        const rows = g[sk];
         if(Array.isArray(rows)) for(const row of rows)
-          if(Array.isArray(row)&&String(row[0]).trim()===String(bib).trim()) return row;
+          if(Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
       }
     } else if(Array.isArray(g)){
-      for(const row of g) if(Array.isArray(row)&&String(row[0]).trim()===String(bib).trim()) return row;
+      for(const row of g) if(Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
     }
   }
   return null;
 }
 
+// Trova punto GPX più vicino a lat/lng dati
+function nearestGPXPoint(gpx, lat, lng){
+  let best = 0, bestDist = Infinity;
+  for(let i=0; i<gpx.length; i++){
+    const dlat = gpx[i][0]-lat, dlng = gpx[i][1]-lng;
+    const d = dlat*dlat + dlng*dlng;
+    if(d < bestDist){ bestDist=d; best=i; }
+  }
+  return best;
+}
+
 async function loadAthlete(athlete){
-  const [mainRes,...splitRes]=await Promise.allSettled([
-    fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA",athlete.contest,athlete.bib),
-    ...INTER_LISTS[athlete.contest].map(il=>fetchProxy(il.list,"0",athlete.bib))
+  const [mainRes, ...splitRes] = await Promise.allSettled([
+    fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA", athlete.contest, athlete.bib),
+    ...INTER_LISTS[athlete.contest].map(il => fetchProxy(il.list, "0", athlete.bib))
   ]);
-  let mainRow=null;
-  if(mainRes.status==="fulfilled") mainRow=findBib(mainRes.value?.data,athlete.bib);
-  const splits={};
-  INTER_LISTS[athlete.contest].forEach((il,i)=>{
-    if(splitRes[i].status==="fulfilled"){
-      const row=findBib(splitRes[i].value?.data,athlete.bib);
-      if(row) splits[il.label]=row;
+  let mainRow = null;
+  if(mainRes.status === "fulfilled") mainRow = findBib(mainRes.value?.data, athlete.bib);
+  const splits = {};
+  INTER_LISTS[athlete.contest].forEach((il,i) => {
+    if(splitRes[i].status === "fulfilled"){
+      const row = findBib(splitRes[i].value?.data, athlete.bib);
+      if(row) splits[il.label] = row;
     }
   });
-  return{mainRow,splits};
+  return { mainRow, splits };
 }
 
 async function refreshAll(){
-  const btn=document.getElementById("refreshBtn");
-  const icon=document.getElementById("refreshIcon");
-  const dot=document.getElementById("statusDot");
+  const btn = document.getElementById("refreshBtn");
+  const icon = document.getElementById("refreshIcon");
+  const dot = document.getElementById("statusDot");
   btn.disabled=true; icon.className="spinning"; dot.className="status-dot live";
-  // Reset GPS cache ad ogni refresh
-  gpsCache={};
+  gpsCache = {};
 
-  const container=document.getElementById("cardsContainer");
-  const empty=container.querySelector("div[style*='padding:80px']");
+  const container = document.getElementById("cardsContainer");
+  const empty = container.querySelector("div[style*='padding:80px']");
   if(empty) empty.remove();
 
-  // Carica dati raceresult + GPS in parallelo
-  const [athleteResults, ...gpsResults]=await Promise.allSettled([
-    Promise.all(ATHLETES.map(a=>loadAthlete(a))),
-    ...([...new Set(ATHLETES.map(a=>a.geoEvent))]).map(evId=>fetchGPS(evId))
+  const uniqueEvents = [...new Set(ATHLETES.map(a=>a.geoEvent))];
+  const uniqueGpx    = [...new Set(ATHLETES.map(a=>a.gpxFile))];
+
+  const [athleteResults, gpsResults, gpxResults] = await Promise.all([
+    Promise.all(ATHLETES.map(a => loadAthlete(a))),
+    Promise.all(uniqueEvents.map(id => fetchGPS(id))),
+    Promise.all(uniqueGpx.map(n => fetchGPX(n))),
   ]);
 
-  // Costruisci mappa GPS per evento
-  const gpsByEvent={};
-  const uniqueEvents=[...new Set(ATHLETES.map(a=>a.geoEvent))];
-  uniqueEvents.forEach((evId,i)=>{
-    if(gpsResults[i].status==="fulfilled") gpsByEvent[evId]=gpsResults[i].value;
+  const gpsByEvent = {};
+  uniqueEvents.forEach((id,i) => gpsByEvent[id] = gpsResults[i]);
+  const gpxByName = {};
+  uniqueGpx.forEach((n,i) => gpxByName[n] = gpxResults[i]);
+
+  athleteResults.forEach((res, i) => {
+    const a = ATHLETES[i];
+    const gpsData = gpsByEvent[a.geoEvent]?.[a.bib] || null;
+    const gpxData = gpxByName[a.gpxFile] || null;
+    renderCard(a, res.mainRow, res.splits, gpsData, gpxData);
   });
 
-  if(athleteResults.status==="fulfilled"){
-    athleteResults.value.forEach((res,i)=>{
-      const a=ATHLETES[i];
-      const gpsData=gpsByEvent[a.geoEvent]?.[a.bib]||null;
-      renderCard(a,res.mainRow,res.splits,gpsData,null);
-    });
-  }
-
-  const now=new Date().toLocaleTimeString("it-IT");
-  document.getElementById("lastUpdate").textContent="⟳ Aggiornato alle "+now;
+  const now = new Date().toLocaleTimeString("it-IT");
+  document.getElementById("lastUpdate").textContent = "⟳ Aggiornato alle "+now;
   btn.disabled=false; icon.className=""; icon.textContent="↻";
   setTimeout(()=>dot.className="status-dot",3000);
 }
 
-function renderCard(athlete,row,splits,gps,err){
-  const container=document.getElementById("cardsContainer");
-  let card=document.getElementById("card-"+athlete.bib);
-  if(!card){card=document.createElement("div");card.id="card-"+athlete.bib;card.className="athlete-card";container.appendChild(card);}
+function formatElapsed(start){
+  const s = Math.floor((Date.now()-start)/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return `${h}h ${String(m).padStart(2,"0")}m`;
+}
 
-  const finishTime=row?.[6]?.trim();
-  const hasFinished=finishTime&&finishTime!==""&&finishTime!=="n.a."&&!finishTime.startsWith("C(");
-  const isDNF=row?.[2]&&String(row[2]).includes("DNF");
-  const rank=row?.[2]||null;
-  const name=row?.[3]||athlete.name;
-  const club=(row?.[5]||"").trim();
+function renderCard(athlete, row, splits, gps, gpx){
+  const container = document.getElementById("cardsContainer");
+  const cardId = "card-"+athlete.bib;
+  let card = document.getElementById(cardId);
+  const isNew = !card;
+  if(isNew){ card=document.createElement("div"); card.id=cardId; card.className="athlete-card"; container.appendChild(card); }
 
-  card.className="athlete-card"+(hasFinished?" finished":isDNF?" dnf":"");
+  const finishTime = row?.[6]?.trim();
+  const hasFinished = finishTime && finishTime!=="" && finishTime!=="n.a." && !finishTime.startsWith("C(");
+  const isDNF = row?.[2] && String(row[2]).includes("DNF");
+  const rank = row?.[2]||null;
+  const name = row?.[3]||athlete.name;
+  const club = (row?.[5]||"").trim();
 
-  let lastIdx=0;
-  athlete.splits.forEach((sp,i)=>{
-    if(splits[sp]) lastIdx=i;
-    if(hasFinished&&sp==="Arrivo") lastIdx=athlete.splits.length-1;
-  });
-  if(hasFinished) lastIdx=athlete.splits.length-1;
-  const kmDone=athlete.splitKm[lastIdx]||0;
-  const pct=Math.min(100,Math.round((kmDone/athlete.totalKm)*100));
+  card.className = "athlete-card"+(hasFinished?" finished":isDNF?" dnf":"");
 
-  const statusHtml=err?`<span class="card-status status-wait">—</span>`:
-    isDNF?`<span class="card-status status-dnf">Ritirato</span>`:
-    hasFinished?`<span class="card-status status-done">✓ Arrivato</span>`:
-    `<span class="card-status status-running">In gara</span>`;
-
-  // GPS row
-  let gpsHtml="";
-  if(gps){
-    const lat=parseFloat(gps.lt).toFixed(5);
-    const lng=parseFloat(gps.lg).toFixed(5);
-    const isMoving=gps.s===1;
-    const mapsUrl=`https://www.google.com/maps?q=${gps.lt},${gps.lg}`;
-    const geoUrl=`https://www.geotracks.co.uk/live/${athlete.geoEvent}`;
-    gpsHtml=`<div class="card-gps">
-      <div class="gps-dot${isMoving?" active":""}"></div>
-      <div class="gps-info">
-        <strong>GPS live</strong>${isMoving?" · in movimento":" · fermo"}
-        <div class="gps-coords">${lat}, ${lng}</div>
-      </div>
-      <a class="gps-map-link" href="${mapsUrl}" target="_blank">📍 Maps</a>
-      <a class="gps-map-link" href="${geoUrl}" target="_blank" style="margin-left:6px">🗺️ GeoTracks</a>
-    </div>`;
-  } else {
-    gpsHtml=`<div class="card-gps">
-      <div class="gps-dot"></div>
-      <div class="gps-info">GPS non ancora attivo</div>
-      <a class="gps-map-link" href="https://www.geotracks.co.uk/live/${athlete.geoEvent}" target="_blank">🗺️ GeoTracks</a>
-    </div>`;
+  // Km da GPS se disponibile
+  let kmGPS = null, gpsIdx = null;
+  if(gps && gpx){
+    const idx = nearestGPXPoint(gpx, parseFloat(gps.lt), parseFloat(gps.lg));
+    gpsIdx = idx;
+    kmGPS = gpx[idx][3]/1000;
   }
 
-  let splitsHtml='<div class="splits-timeline">';
+  // Km da checkpoint
+  let lastCpIdx = 0;
+  athlete.splits.forEach((sp,i)=>{ if(splits[sp]) lastCpIdx=i; });
+  if(hasFinished) lastCpIdx = athlete.splits.length-1;
+  const kmCheckpoint = athlete.splitKm[lastCpIdx]||0;
+
+  // Usa GPS se disponibile e > checkpoint
+  const kmDone = (kmGPS !== null && kmGPS > kmCheckpoint) ? kmGPS : kmCheckpoint;
+  const pct = Math.min(100, Math.round((kmDone/athlete.totalKm)*100));
+
+  const statusHtml = hasFinished?`<span class="card-status status-done">✓ Arrivato</span>`:
+    isDNF?`<span class="card-status status-dnf">Ritirato</span>`:
+    (gps||Object.keys(splits).length>0)?`<span class="card-status status-running">In gara</span>`:
+    `<span class="card-status status-wait">In attesa</span>`;
+
+  // GPS row
+  let gpsRowHtml = "";
+  if(gps){
+    const lat=parseFloat(gps.lt).toFixed(5), lng=parseFloat(gps.lg).toFixed(5);
+    const isMoving = gps.s===1;
+    const mapsUrl = `https://www.google.com/maps?q=${gps.lt},${gps.lg}`;
+    const ele = gpx && gpsIdx!==null ? Math.round(gpx[gpsIdx][2])+"m" : "—";
+    gpsRowHtml = `<div class="card-gps-row">
+      <div class="gps-dot${isMoving?" active":""}"></div>
+      <div class="gps-text">
+        <strong>GPS live</strong> · ${isMoving?"in movimento":"fermo"} · <span class="gps-coords">${lat}, ${lng}</span> · alt. ${ele}
+      </div>
+      <a class="btn-sm" href="${mapsUrl}" target="_blank">📍 Maps</a>
+    </div>`;
+  } else {
+    gpsRowHtml = `<div class="card-gps-row"><div class="gps-dot"></div><div class="gps-text" style="color:var(--muted)">Tracker GPS non ancora attivo</div></div>`;
+  }
+
+  // Splits timeline
+  let splitsHtml = '<div class="splits-timeline">';
   athlete.splits.forEach((sp,i)=>{
-    const isDone=i===0||!!splits[sp]||(sp==="Arrivo"&&hasFinished)||i<=lastIdx;
-    const isLast=i===athlete.splits.length-1;
-    const isCurrent=!isDone&&i>0&&(i-1)<=lastIdx;
+    const isDone = i===0||!!splits[sp]||(sp==="Arrivo"&&hasFinished)||i<=lastCpIdx;
+    const isLast = i===athlete.splits.length-1;
+    const isCurrent = !isDone&&i>0&&(i-1)<=lastCpIdx;
     let timeHtml="";
-    if(sp!=="Partenza"&&splits[sp]){
-      const t=Array.isArray(splits[sp])?splits[sp][6]:"";
-      if(t&&t!=="n.a.") timeHtml=`<div class="split-time">${t}</div>`;
-    }
+    if(sp!=="Partenza"&&splits[sp]){const t=Array.isArray(splits[sp])?splits[sp][6]:"";if(t&&t!=="n.a.") timeHtml=`<div class="split-time">${t}</div>`;}
     if(sp==="Arrivo"&&hasFinished) timeHtml=`<div class="split-time">${finishTime}</div>`;
     const dotCls=(isLast&&isDone)?"split-dot finish done":isDone?"split-dot done":isCurrent?"split-dot current":"split-dot";
     const itemCls=isDone?"split-item done":"split-item";
     const icon=isDone?"✓":isCurrent?"●":"";
-    const short=sp.replace("Passo ","");
-    splitsHtml+=`<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${short}</div>${timeHtml}</div>`;
+    splitsHtml+=`<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${sp.replace("Passo ","")}</div>${timeHtml}</div>`;
   });
   splitsHtml+="</div>";
 
-  const statsHtml=(row&&!err)?`<div class="card-stats">
+  const statsHtml = row?`<div class="card-stats">
     ${rank&&rank!=="n.a."?`<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>`:""}
     ${hasFinished?`<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value">${finishTime}</div></div>`:""}
     ${row[7]&&row[7]!=="n.a."&&row[7].trim()?`<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>`:""}
+    ${kmGPS!==null?`<div class="stat"><div class="stat-label">Km GPS</div><div class="stat-value">${kmGPS.toFixed(1)} km</div></div>`:""}
   </div>`:"";
 
-  card.innerHTML=`
+  const mapId = "map-"+athlete.bib;
+  const chartId = "chart-"+athlete.bib;
+
+  card.innerHTML = `
     <div class="card-header">
       <div class="card-bib" style="color:${athlete.color}">${athlete.bib}</div>
       <div style="flex:1"><div class="card-name">${esc(name)}</div>${club?`<div class="card-club">${esc(club)}</div>`:""}</div>
       <span class="race-badge" style="background:${athlete.color}22;color:${athlete.color}">${athlete.raceLabel}</span>
       ${statusHtml}
     </div>
-    ${gpsHtml}
+    ${gpsRowHtml}
+    <div class="card-map-wrap">
+      <div id="${mapId}" class="card-map"></div>
+    </div>
+    <div class="card-elevation">
+      <div class="elevation-label">Profilo altimetrico — percorso + posizione attuale</div>
+      <div class="elevation-chart-wrap"><canvas id="${chartId}"></canvas></div>
+    </div>
     <div class="card-progress">
-      <div class="progress-label"><span>Percorso (checkpoint)</span><strong>${kmDone} / ${athlete.totalKm} km${pct>0?" · "+pct+"%":""}</strong></div>
+      <div class="progress-label"><span>Avanzamento</span><strong>${kmDone.toFixed(1)} / ${athlete.totalKm} km · ${pct}%</strong></div>
       <div class="progress-bar-wrap"><div class="progress-bar${hasFinished?" done":""}" style="width:${pct}%"></div></div>
     </div>
     <div class="card-splits"><div class="splits-label">Checkpoint</div>${splitsHtml}</div>
     ${statsHtml}`;
+
+  // Inizializza mappa e profilo dopo render
+  requestAnimationFrame(() => {
+    initMap(mapId, athlete, gpx, gps, gpsIdx);
+    initChart(chartId, athlete, gpx, gpsIdx);
+  });
+}
+
+function initMap(mapId, athlete, gpx, gps, gpsIdx){
+  // Rimuovi mappa precedente se esiste
+  if(mapObjects[mapId]){ mapObjects[mapId].remove(); delete mapObjects[mapId]; }
+
+  const mapEl = document.getElementById(mapId);
+  if(!mapEl) return;
+
+  // Centro: usa posizione GPS se disponibile, altrimenti centro del percorso
+  let center, zoom;
+  if(gps){ center=[parseFloat(gps.lt), parseFloat(gps.lg)]; zoom=14; }
+  else if(gpx){ const mid=Math.floor(gpx.length/2); center=[gpx[mid][0],gpx[mid][1]]; zoom=12; }
+  else{ center=[46.35,12.18]; zoom=12; }
+
+  const map = L.map(mapId, { zoomControl:true, attributionControl:false }).setView(center, zoom);
+  mapObjects[mapId] = map;
+
+  // Tile layer topografico
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom:17, opacity:0.85
+  }).addTo(map);
+
+  // Tracciato GPX
+  if(gpx){
+    const latlngs = gpx.map(p=>[p[0],p[1]]);
+    L.polyline(latlngs, {color:athlete.color, weight:3, opacity:0.85}).addTo(map);
+
+    // Markers checkpoint (inizio/fine)
+    const startPt = gpx[0], endPt = gpx[gpx.length-1];
+    L.circleMarker([startPt[0],startPt[1]],{radius:6,color:'#4caf7d',fillColor:'#4caf7d',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Partenza / Forno di Zoldo");
+    L.circleMarker([endPt[0],endPt[1]],{radius:6,color:'#4caf7d',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Arrivo / Forno di Zoldo");
+  }
+
+  // Puntino atleta
+  if(gps){
+    const lat=parseFloat(gps.lt), lng=parseFloat(gps.lg);
+    const isMoving = gps.s===1;
+    const ele = (gpx&&gpsIdx!==null) ? Math.round(gpx[gpsIdx][2])+"m slm" : "";
+    const kmStr = (gpx&&gpsIdx!==null) ? (gpx[gpsIdx][3]/1000).toFixed(1)+" km" : "";
+
+    const icon = L.divIcon({
+      html: `<div style="width:16px;height:16px;border-radius:50%;background:${athlete.color};border:3px solid #fff;box-shadow:0 0 8px ${athlete.color};${isMoving?'animation:pdot 1s infinite':''}"></div>`,
+      iconSize:[16,16], iconAnchor:[8,8], className:''
+    });
+
+    const popup = `<div class="popup-bib" style="color:${athlete.color}">#${athlete.bib}</div>
+      <div class="popup-row"><strong>${athlete.name.split(' ')[0]}</strong> · ${athlete.raceLabel}</div>
+      ${kmStr?`<div class="popup-row">📍 <strong>${kmStr}</strong> percorsi</div>`:''}
+      ${ele?`<div class="popup-row">⛰️ Quota <strong>${ele}</strong></div>`:''}
+      <div class="popup-row">${isMoving?"🟢 In movimento":"⚪ Fermo"}</div>`;
+
+    L.marker([lat,lng],{icon}).addTo(map).bindPopup(popup);
+  }
+}
+
+function initChart(chartId, athlete, gpx, gpsIdx){
+  if(chartObjects[chartId]){ chartObjects[chartId].destroy(); delete chartObjects[chartId]; }
+  const canvas = document.getElementById(chartId);
+  if(!canvas || !gpx) return;
+
+  const totalDistM = gpx[gpx.length-1][3];
+  // Campiona per grafico: 150 punti
+  const step = Math.max(1, Math.floor(gpx.length/150));
+  const labels=[], eles=[];
+  for(let i=0;i<gpx.length;i+=step){
+    labels.push((gpx[i][3]/1000).toFixed(1));
+    eles.push(gpx[i][2]);
+  }
+
+  // Linea verticale posizione atleta
+  const posKm = gpsIdx!==null ? gpx[gpsIdx][3]/1000 : null;
+
+  const chart = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data: eles,
+        borderColor: athlete.color,
+        borderWidth: 1.5,
+        fill: true,
+        backgroundColor: `${athlete.color}22`,
+        pointRadius: 0,
+        tension: 0.3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title: ctx => `km ${ctx[0].label}`,
+            label: ctx => `${ctx.raw}m slm`
+          }
+        },
+        annotation: posKm ? {
+          annotations:{
+            pos:{
+              type:'line', xMin:posKm.toFixed(1), xMax:posKm.toFixed(1),
+              borderColor:'#fff', borderWidth:2, borderDash:[4,3],
+              label:{content:'📍', display:true, position:'start'}
+            }
+          }
+        } : {}
+      },
+      scales:{
+        x:{
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8},
+          grid:{color:'rgba(255,255,255,0.05)'},
+          title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}}
+        },
+        y:{
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:5},
+          grid:{color:'rgba(255,255,255,0.05)'},
+          title:{display:true,text:'m',color:'#7a8fa0',font:{size:9}}
+        }
+      }
+    }
+  });
+  chartObjects[chartId] = chart;
 }
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
