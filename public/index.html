@@ -7,174 +7,87 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
 :root {
-  --bg: #0a0f14;
-  --surface: rgba(18,26,34,0.82);
-  --border: rgba(255,255,255,0.09);
-  --text: #e8eff6;
-  --muted: #7a8fa0;
-  --accent: #e8873a;
-  --green: #4caf7d;
-  --blue: #6ab0d4;
-  --red: #e05a4e;
-  --rock: #8fa3b0;
+  --bg:#0a0f14; --surface:rgba(18,26,34,0.82); --border:rgba(255,255,255,0.09);
+  --text:#e8eff6; --muted:#7a8fa0; --accent:#e8873a; --green:#4caf7d;
+  --blue:#6ab0d4; --red:#e05a4e; --rock:#8fa3b0;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;position:relative;}
+body::before{content:'';position:fixed;inset:0;background-image:url('/civetta.jpg');background-size:cover;background-position:center 30%;background-attachment:fixed;filter:brightness(0.18) saturate(0.5) sepia(0.3);z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(100,130,150,0.06) 0%,transparent 70%),linear-gradient(to bottom,rgba(10,15,20,0.55) 0%,rgba(10,15,20,0.2) 40%,rgba(10,15,20,0.6) 100%);z-index:0;}
+header,main{position:relative;z-index:1;}
+header{border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;background:rgba(8,13,18,0.9);backdrop-filter:blur(12px);z-index:100;}
+.logo{font-weight:900;font-size:20px;letter-spacing:-0.5px;color:var(--accent);}
+.logo span{color:var(--text);}
+.logo-sub{font-size:10px;color:var(--rock);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+.header-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.refresh-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;display:flex;align-items:center;gap:6px;}
+.refresh-btn:hover{opacity:0.85;}.refresh-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.toggle-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.toggle{width:32px;height:18px;background:rgba(255,255,255,0.12);border-radius:9px;position:relative;cursor:pointer;border:none;transition:background 0.2s;}
+.toggle.on{background:var(--accent);}
+.toggle::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left 0.2s;}
+.toggle.on::after{left:17px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pdot 2s infinite;}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:0.4}}
+main{padding:20px;max-width:960px;margin:0 auto;}
+.cards-grid{display:grid;gap:14px;}
+.athlete-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);transition:border-color 0.3s,box-shadow 0.3s;box-shadow:0 4px 24px rgba(0,0,0,0.4);}
+.athlete-card:hover{box-shadow:0 6px 32px rgba(0,0,0,0.55);}
+.athlete-card.finished{border-color:rgba(76,175,125,0.5);}
+.athlete-card.dnf{border-color:rgba(224,90,78,0.4);opacity:0.7;}
+.card-header{padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.card-bib{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:22px;min-width:50px;}
+.card-name{font-weight:700;font-size:15px;flex:1;}
+.card-club{font-size:11px;color:var(--muted);margin-top:2px;}
+.race-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.card-status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;white-space:nowrap;}
+.status-running{background:rgba(232,135,58,0.18);color:var(--accent);}
+.status-done{background:rgba(76,175,125,0.18);color:var(--green);}
+.status-dnf{background:rgba(224,90,78,0.18);color:var(--red);}
+.status-wait{background:rgba(122,143,160,0.18);color:var(--muted);}
+.card-progress{padding:14px 16px;border-bottom:1px solid var(--border);}
+.progress-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;}
+.progress-label strong{color:var(--text);font-weight:600;}
+.progress-bar-wrap{background:rgba(255,255,255,0.08);border-radius:4px;height:6px;overflow:hidden;}
+.progress-bar{height:6px;border-radius:4px;background:var(--accent);transition:width 0.6s ease;min-width:0;}
+.progress-bar.done{background:var(--green);}
 
-body {
-  color:var(--text);
-  font-family:'Inter',sans-serif;
-  font-size:14px;
-  min-height:100vh;
-  position:relative;
-}
+/* GPS live row */
+.card-gps{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.gps-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.gps-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);animation:pdot 2s infinite;}
+.gps-info{flex:1;font-size:12px;color:var(--muted);}
+.gps-info strong{color:var(--text);}
+.gps-coords{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--rock);}
+.gps-map-link{font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;padding:4px 10px;border:1px solid rgba(106,176,212,0.3);border-radius:5px;background:rgba(106,176,212,0.08);white-space:nowrap;}
+.gps-map-link:hover{background:rgba(106,176,212,0.18);}
 
-/* Background */
-body::before {
-  content:'';
-  position:fixed;
-  inset:0;
-  background-image: url('/civetta.jpg');
-  background-size:cover;
-  background-position:center 30%;
-  background-attachment:fixed;
-  filter: brightness(0.18) saturate(0.5) sepia(0.3);
-  z-index:0;
-}
-/* Subtle mountain outline overlay using CSS gradient */
-body::after {
-  content:'';
-  position:fixed;
-  inset:0;
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(100,130,150,0.06) 0%, transparent 70%),
-    linear-gradient(to bottom, rgba(10,15,20,0.55) 0%, rgba(10,15,20,0.2) 40%, rgba(10,15,20,0.6) 100%);
-  z-index:0;
-}
-
-header, main, footer { position:relative; z-index:1; }
-
-header {
-  border-bottom:1px solid var(--border);
-  padding:14px 20px;
-  display:flex;
-  align-items:center;
-  gap:14px;
-  position:sticky;
-  top:0;
-  background:rgba(8,13,18,0.88);
-  backdrop-filter:blur(12px);
-  z-index:100;
-}
-.logo { font-weight:900; font-size:20px; letter-spacing:-0.5px; color:var(--accent); }
-.logo span { color:var(--text); }
-.logo-sub { font-size:10px; color:var(--rock); font-family:'JetBrains Mono',monospace; letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
-.header-actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
-.refresh-btn {
-  background:var(--accent); color:#fff; border:none; border-radius:6px;
-  padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;
-  font-family:'Inter',sans-serif; transition:opacity 0.15s; display:flex; align-items:center; gap:6px;
-}
-.refresh-btn:hover { opacity:0.85; }
-.refresh-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.toggle-wrap { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
-.toggle { width:32px; height:18px; background:rgba(255,255,255,0.12); border-radius:9px; position:relative; cursor:pointer; border:none; transition:background 0.2s; }
-.toggle.on { background:var(--accent); }
-.toggle::after { content:''; position:absolute; width:12px; height:12px; border-radius:50%; background:#fff; top:3px; left:3px; transition:left 0.2s; }
-.toggle.on::after { left:17px; }
-.status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
-.status-dot.live { background:var(--green); box-shadow:0 0 6px var(--green); animation:pulse-dot 2s infinite; }
-@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-main { padding:20px; max-width:960px; margin:0 auto; }
-
-.cards-grid { display:grid; gap:14px; }
-
-.athlete-card {
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:14px;
-  overflow:hidden;
-  backdrop-filter:blur(10px);
-  transition:border-color 0.3s, box-shadow 0.3s;
-  box-shadow:0 4px 24px rgba(0,0,0,0.4);
-}
-.athlete-card:hover { box-shadow:0 6px 32px rgba(0,0,0,0.55); }
-.athlete-card.finished { border-color:rgba(76,175,125,0.5); }
-.athlete-card.dnf     { border-color:rgba(224,90,78,0.4); opacity:0.7; }
-
-.card-header {
-  padding:14px 16px;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  border-bottom:1px solid var(--border);
-}
-.card-bib { font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px; min-width:50px; }
-.card-name { font-weight:700; font-size:15px; flex:1; }
-.card-club { font-size:11px; color:var(--muted); margin-top:2px; }
-.race-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:5px; font-family:'JetBrains Mono',monospace; white-space:nowrap; }
-.card-status { font-size:11px; font-weight:600; padding:3px 9px; border-radius:5px; white-space:nowrap; }
-.status-running { background:rgba(232,135,58,0.18); color:var(--accent); }
-.status-done    { background:rgba(76,175,125,0.18); color:var(--green); }
-.status-dnf     { background:rgba(224,90,78,0.18);  color:var(--red); }
-.status-wait    { background:rgba(122,143,160,0.18); color:var(--muted); }
-
-.card-progress { padding:14px 16px; border-bottom:1px solid var(--border); }
-.progress-label {
-  font-size:10px; color:var(--muted); text-transform:uppercase;
-  letter-spacing:1px; margin-bottom:8px;
-  display:flex; justify-content:space-between;
-}
-.progress-label strong { color:var(--text); font-weight:600; }
-.progress-bar-wrap { background:rgba(255,255,255,0.08); border-radius:4px; height:6px; overflow:hidden; }
-.progress-bar { height:6px; border-radius:4px; background:var(--accent); transition:width 0.6s ease; min-width:2px; }
-.progress-bar.done { background:var(--green); }
-
-.card-splits { padding:12px 16px 14px; }
-.splits-label { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
-.splits-timeline { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:4px; }
-.split-item { display:flex; flex-direction:column; align-items:center; flex:1; min-width:64px; position:relative; }
-.split-item:not(:last-child)::after { content:''; position:absolute; top:10px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.08); z-index:0; }
-.split-item.done:not(:last-child)::after { background:var(--accent); opacity:0.6; }
-.split-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); background:rgba(10,15,20,0.6); z-index:1; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; margin-bottom:6px; }
-.split-dot.done    { border-color:var(--accent); background:var(--accent); color:#fff; }
-.split-dot.finish.done { border-color:var(--green); background:var(--green); }
-.split-dot.current { border-color:var(--accent); background:rgba(10,15,20,0.8); color:var(--accent); animation:pulse-dot 1.5s infinite; }
-.split-label { font-size:10px; color:var(--muted); text-align:center; line-height:1.3; }
-.split-time  { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:var(--accent); text-align:center; margin-top:2px; }
-.split-item.done .split-label { color:var(--text); }
-
-.card-stats { padding:0 16px 14px; display:flex; gap:20px; flex-wrap:wrap; }
-.stat { display:flex; flex-direction:column; gap:2px; }
-.stat-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; }
-.stat-value { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:var(--text); }
-.stat-value.hi { color:var(--accent); }
-
-.map-btn {
-  margin:0 16px 14px;
-  display:inline-flex; align-items:center; gap:6px;
-  background:rgba(106,176,212,0.1); color:var(--blue);
-  border:1px solid rgba(106,176,212,0.25); border-radius:6px;
-  padding:6px 12px; font-size:12px; font-weight:600;
-  text-decoration:none; transition:background 0.15s;
-}
-.map-btn:hover { background:rgba(106,176,212,0.2); }
-
-.last-update { text-align:center; font-size:11px; color:var(--muted); margin-top:20px; padding-bottom:40px; font-family:'JetBrains Mono',monospace; }
-
-/* Mountain silhouette decoration at bottom */
-.mountain-deco {
-  position:fixed; bottom:0; left:0; right:0; height:120px;
-  background:linear-gradient(to top, rgba(8,13,18,0.7) 0%, transparent 100%);
-  z-index:0; pointer-events:none;
-}
-
-@keyframes spin { to { transform:rotate(360deg); } }
-.spinning { display:inline-block; animation:spin 0.8s linear infinite; }
+.card-splits{padding:12px 16px 14px;}
+.splits-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.splits-timeline{display:flex;align-items:flex-start;overflow-x:auto;padding-bottom:4px;}
+.split-item{display:flex;flex-direction:column;align-items:center;flex:1;min-width:64px;position:relative;}
+.split-item:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:2px;background:rgba(255,255,255,0.08);z-index:0;}
+.split-item.done:not(:last-child)::after{background:var(--accent);opacity:0.6;}
+.split-dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(10,15,20,0.6);z-index:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-bottom:6px;}
+.split-dot.done{border-color:var(--accent);background:var(--accent);color:#fff;}
+.split-dot.finish.done{border-color:var(--green);background:var(--green);}
+.split-dot.current{border-color:var(--accent);background:rgba(10,15,20,0.8);color:var(--accent);animation:pdot 1.5s infinite;}
+.split-label{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;}
+.split-time{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-align:center;margin-top:2px;}
+.split-item.done .split-label{color:var(--text);}
+.card-stats{padding:0 16px 14px;display:flex;gap:20px;flex-wrap:wrap;}
+.stat{display:flex;flex-direction:column;gap:2px;}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text);}
+.stat-value.hi{color:var(--accent);}
+.last-update{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;padding-bottom:40px;font-family:'JetBrains Mono',monospace;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinning{display:inline-block;animation:spin 0.8s linear infinite;}
 </style>
 </head>
 <body>
-<div class="mountain-deco"></div>
 <header>
   <div>
     <div class="logo">DXT<span> '26</span></div>
@@ -191,7 +104,6 @@ main { padding:20px; max-width:960px; margin:0 auto; }
     </button>
   </div>
 </header>
-
 <main>
   <div class="cards-grid" id="cardsContainer">
     <div style="text-align:center;padding:80px 20px;color:var(--muted)">
@@ -202,205 +114,227 @@ main { padding:20px; max-width:960px; margin:0 auto; }
   </div>
   <div class="last-update" id="lastUpdate"></div>
 </main>
-
 <script>
 const ATHLETES = [
-  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a",
+  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,11,38,62,84,103], totalKm:103 },
-  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4",
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4",
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d",
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
-  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d",
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
 ];
 
 const INTER_LISTS = {
-  "1": [
-    { list:"RESULT PRESENTER|Inter1_all_new", label:"Passo Duran" },
-    { list:"RESULT PRESENTER|Inter3_all_new", label:"Passo Staulanza" },
-    { list:"RESULT PRESENTER|Inter4_all_new", label:"Zoppè" },
-    { list:"RESULT PRESENTER|Inter5_all_new", label:"Passo Cibiana" },
-  ],
-  "2": [
-    { list:"RESULT PRESENTER|Inter2_all_new", label:"Fusine" },
-    { list:"RESULT PRESENTER|Inter4_all_new", label:"Zoppè" },
-    { list:"RESULT PRESENTER|Inter5_all_new", label:"Passo Cibiana" },
-  ],
-  "3": [
-    { list:"RESULT PRESENTER|Inter1_all_new", label:"Passo Duran" },
-    { list:"RESULT PRESENTER|Inter3_all_new", label:"Passo Staulanza" },
-  ],
+  "1":[{list:"RESULT PRESENTER|Inter1_all_new",label:"Passo Duran"},{list:"RESULT PRESENTER|Inter3_all_new",label:"Passo Staulanza"},{list:"RESULT PRESENTER|Inter4_all_new",label:"Zoppè"},{list:"RESULT PRESENTER|Inter5_all_new",label:"Passo Cibiana"}],
+  "2":[{list:"RESULT PRESENTER|Inter2_all_new",label:"Fusine"},{list:"RESULT PRESENTER|Inter4_all_new",label:"Zoppè"},{list:"RESULT PRESENTER|Inter5_all_new",label:"Passo Cibiana"}],
+  "3":[{list:"RESULT PRESENTER|Inter1_all_new",label:"Passo Duran"},{list:"RESULT PRESENTER|Inter3_all_new",label:"Passo Staulanza"}],
 };
 
-let autoRefresh = false, autoTimer = null;
+// Cache GPS per evento (evita chiamate duplicate per stessa gara)
+let gpsCache = {};
+let autoRefresh=false, autoTimer=null;
 
-async function fetchProxy(listname, contest, bib) {
-  const url = `/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("HTTP " + r.status);
+async function fetchProxy(listname,contest,bib){
+  const r=await fetch(`/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`);
+  if(!r.ok) throw new Error("HTTP "+r.status);
   return r.json();
 }
 
-function findBib(data, bib) {
-  if (!data) return null;
-  for (const gk of Object.keys(data)) {
-    const g = data[gk];
-    if (typeof g === "object" && !Array.isArray(g)) {
-      for (const sk of Object.keys(g)) {
-        const rows = g[sk];
-        if (Array.isArray(rows)) for (const row of rows) {
-          if (Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
-        }
+async function fetchGPS(eventId){
+  if(gpsCache[eventId]) return gpsCache[eventId];
+  const r=await fetch(`/api/raceresult?action=gps&eventId=${eventId}`);
+  if(!r.ok) return null;
+  const data=await r.json();
+  // Indicizza per pettorale
+  const byBib={};
+  for(const p of (data.data||[])) byBib[String(p.la)]=p;
+  gpsCache[eventId]=byBib;
+  return byBib;
+}
+
+function findBib(data,bib){
+  if(!data) return null;
+  for(const gk of Object.keys(data)){
+    const g=data[gk];
+    if(typeof g==="object"&&!Array.isArray(g)){
+      for(const sk of Object.keys(g)){
+        const rows=g[sk];
+        if(Array.isArray(rows)) for(const row of rows)
+          if(Array.isArray(row)&&String(row[0]).trim()===String(bib).trim()) return row;
       }
-    } else if (Array.isArray(g)) {
-      for (const row of g) {
-        if (Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
-      }
+    } else if(Array.isArray(g)){
+      for(const row of g) if(Array.isArray(row)&&String(row[0]).trim()===String(bib).trim()) return row;
     }
   }
   return null;
 }
 
-async function loadAthlete(athlete) {
-  const [mainRes, ...splitRes] = await Promise.allSettled([
-    fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA", athlete.contest, athlete.bib),
-    ...INTER_LISTS[athlete.contest].map(il => fetchProxy(il.list, "0", athlete.bib))
+async function loadAthlete(athlete){
+  const [mainRes,...splitRes]=await Promise.allSettled([
+    fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA",athlete.contest,athlete.bib),
+    ...INTER_LISTS[athlete.contest].map(il=>fetchProxy(il.list,"0",athlete.bib))
   ]);
-  let mainRow = null;
-  if (mainRes.status === "fulfilled") mainRow = findBib(mainRes.value?.data, athlete.bib);
-  const splits = {};
-  INTER_LISTS[athlete.contest].forEach((il, i) => {
-    if (splitRes[i].status === "fulfilled") {
-      const row = findBib(splitRes[i].value?.data, athlete.bib);
-      if (row) splits[il.label] = row;
+  let mainRow=null;
+  if(mainRes.status==="fulfilled") mainRow=findBib(mainRes.value?.data,athlete.bib);
+  const splits={};
+  INTER_LISTS[athlete.contest].forEach((il,i)=>{
+    if(splitRes[i].status==="fulfilled"){
+      const row=findBib(splitRes[i].value?.data,athlete.bib);
+      if(row) splits[il.label]=row;
     }
   });
-  return { mainRow, splits };
+  return{mainRow,splits};
 }
 
-async function refreshAll() {
-  const btn = document.getElementById("refreshBtn");
-  const icon = document.getElementById("refreshIcon");
-  const dot = document.getElementById("statusDot");
-  btn.disabled = true; icon.className = "spinning"; dot.className = "status-dot live";
-  const container = document.getElementById("cardsContainer");
-  const empty = container.querySelector("div[style*='padding:80px']");
-  if (empty) empty.remove();
-  const results = await Promise.allSettled(ATHLETES.map(a => loadAthlete(a)));
-  results.forEach((res, i) => {
-    const a = ATHLETES[i];
-    if (res.status === "fulfilled") renderCard(a, res.value.mainRow, res.value.splits);
-    else renderCard(a, null, {}, res.reason?.message);
+async function refreshAll(){
+  const btn=document.getElementById("refreshBtn");
+  const icon=document.getElementById("refreshIcon");
+  const dot=document.getElementById("statusDot");
+  btn.disabled=true; icon.className="spinning"; dot.className="status-dot live";
+  // Reset GPS cache ad ogni refresh
+  gpsCache={};
+
+  const container=document.getElementById("cardsContainer");
+  const empty=container.querySelector("div[style*='padding:80px']");
+  if(empty) empty.remove();
+
+  // Carica dati raceresult + GPS in parallelo
+  const [athleteResults, ...gpsResults]=await Promise.allSettled([
+    Promise.all(ATHLETES.map(a=>loadAthlete(a))),
+    ...([...new Set(ATHLETES.map(a=>a.geoEvent))]).map(evId=>fetchGPS(evId))
+  ]);
+
+  // Costruisci mappa GPS per evento
+  const gpsByEvent={};
+  const uniqueEvents=[...new Set(ATHLETES.map(a=>a.geoEvent))];
+  uniqueEvents.forEach((evId,i)=>{
+    if(gpsResults[i].status==="fulfilled") gpsByEvent[evId]=gpsResults[i].value;
   });
-  const now = new Date().toLocaleTimeString("it-IT");
-  document.getElementById("lastUpdate").textContent = "⟳ Aggiornato alle " + now;
-  btn.disabled = false; icon.className = ""; icon.textContent = "↻";
-  setTimeout(() => dot.className = "status-dot", 3000);
-}
 
-function renderCard(athlete, row, splits, err) {
-  const container = document.getElementById("cardsContainer");
-  let card = document.getElementById("card-" + athlete.bib);
-  if (!card) {
-    card = document.createElement("div");
-    card.id = "card-" + athlete.bib;
-    card.className = "athlete-card";
-    container.appendChild(card);
+  if(athleteResults.status==="fulfilled"){
+    athleteResults.value.forEach((res,i)=>{
+      const a=ATHLETES[i];
+      const gpsData=gpsByEvent[a.geoEvent]?.[a.bib]||null;
+      renderCard(a,res.mainRow,res.splits,gpsData,null);
+    });
   }
-  const finishTime = row?.[6]?.trim();
-  const hasFinished = finishTime && finishTime !== "" && finishTime !== "n.a." && !finishTime.startsWith("C(");
-  const isDNF = row?.[2] && String(row[2]).includes("DNF");
-  const rank = row?.[2] || null;
-  const name = row?.[3] || athlete.name;
-  const club = (row?.[5] || "").trim();
 
-  card.className = "athlete-card" + (hasFinished ? " finished" : isDNF ? " dnf" : "");
+  const now=new Date().toLocaleTimeString("it-IT");
+  document.getElementById("lastUpdate").textContent="⟳ Aggiornato alle "+now;
+  btn.disabled=false; icon.className=""; icon.textContent="↻";
+  setTimeout(()=>dot.className="status-dot",3000);
+}
 
-  // Calcola km percorsi dall'ultimo checkpoint passato
-  let lastIdx = 0;
-  athlete.splits.forEach((sp, i) => {
-    if (splits[sp]) lastIdx = i;
-    if (hasFinished && sp === "Arrivo") lastIdx = athlete.splits.length - 1;
+function renderCard(athlete,row,splits,gps,err){
+  const container=document.getElementById("cardsContainer");
+  let card=document.getElementById("card-"+athlete.bib);
+  if(!card){card=document.createElement("div");card.id="card-"+athlete.bib;card.className="athlete-card";container.appendChild(card);}
+
+  const finishTime=row?.[6]?.trim();
+  const hasFinished=finishTime&&finishTime!==""&&finishTime!=="n.a."&&!finishTime.startsWith("C(");
+  const isDNF=row?.[2]&&String(row[2]).includes("DNF");
+  const rank=row?.[2]||null;
+  const name=row?.[3]||athlete.name;
+  const club=(row?.[5]||"").trim();
+
+  card.className="athlete-card"+(hasFinished?" finished":isDNF?" dnf":"");
+
+  let lastIdx=0;
+  athlete.splits.forEach((sp,i)=>{
+    if(splits[sp]) lastIdx=i;
+    if(hasFinished&&sp==="Arrivo") lastIdx=athlete.splits.length-1;
   });
-  if (hasFinished) lastIdx = athlete.splits.length - 1;
-  const kmDone = athlete.splitKm[lastIdx] || 0;
-  const pct = Math.min(100, Math.round((kmDone / athlete.totalKm) * 100));
+  if(hasFinished) lastIdx=athlete.splits.length-1;
+  const kmDone=athlete.splitKm[lastIdx]||0;
+  const pct=Math.min(100,Math.round((kmDone/athlete.totalKm)*100));
 
-  const statusHtml = err
-    ? `<span class="card-status status-wait">—</span>`
-    : isDNF ? `<span class="card-status status-dnf">Ritirato</span>`
-    : hasFinished ? `<span class="card-status status-done">✓ Arrivato</span>`
-    : `<span class="card-status status-running">In gara</span>`;
+  const statusHtml=err?`<span class="card-status status-wait">—</span>`:
+    isDNF?`<span class="card-status status-dnf">Ritirato</span>`:
+    hasFinished?`<span class="card-status status-done">✓ Arrivato</span>`:
+    `<span class="card-status status-running">In gara</span>`;
 
-  let splitsHtml = '<div class="splits-timeline">';
-  athlete.splits.forEach((sp, i) => {
-    const isDone = i === 0 || !!splits[sp] || (sp==="Arrivo" && hasFinished) || i <= lastIdx;
-    const isLast = i === athlete.splits.length - 1;
-    const isCurrent = !isDone && i > 0 && (i-1) <= lastIdx;
-    let timeHtml = "";
-    if (sp !== "Partenza" && splits[sp]) {
-      const t = Array.isArray(splits[sp]) ? splits[sp][6] : "";
-      if (t && t !== "n.a.") timeHtml = `<div class="split-time">${t}</div>`;
+  // GPS row
+  let gpsHtml="";
+  if(gps){
+    const lat=parseFloat(gps.lt).toFixed(5);
+    const lng=parseFloat(gps.lg).toFixed(5);
+    const isMoving=gps.s===1;
+    const mapsUrl=`https://www.google.com/maps?q=${gps.lt},${gps.lg}`;
+    const geoUrl=`https://www.geotracks.co.uk/live/${athlete.geoEvent}`;
+    gpsHtml=`<div class="card-gps">
+      <div class="gps-dot${isMoving?" active":""}"></div>
+      <div class="gps-info">
+        <strong>GPS live</strong>${isMoving?" · in movimento":" · fermo"}
+        <div class="gps-coords">${lat}, ${lng}</div>
+      </div>
+      <a class="gps-map-link" href="${mapsUrl}" target="_blank">📍 Maps</a>
+      <a class="gps-map-link" href="${geoUrl}" target="_blank" style="margin-left:6px">🗺️ GeoTracks</a>
+    </div>`;
+  } else {
+    gpsHtml=`<div class="card-gps">
+      <div class="gps-dot"></div>
+      <div class="gps-info">GPS non ancora attivo</div>
+      <a class="gps-map-link" href="https://www.geotracks.co.uk/live/${athlete.geoEvent}" target="_blank">🗺️ GeoTracks</a>
+    </div>`;
+  }
+
+  let splitsHtml='<div class="splits-timeline">';
+  athlete.splits.forEach((sp,i)=>{
+    const isDone=i===0||!!splits[sp]||(sp==="Arrivo"&&hasFinished)||i<=lastIdx;
+    const isLast=i===athlete.splits.length-1;
+    const isCurrent=!isDone&&i>0&&(i-1)<=lastIdx;
+    let timeHtml="";
+    if(sp!=="Partenza"&&splits[sp]){
+      const t=Array.isArray(splits[sp])?splits[sp][6]:"";
+      if(t&&t!=="n.a.") timeHtml=`<div class="split-time">${t}</div>`;
     }
-    if (sp === "Arrivo" && hasFinished) timeHtml = `<div class="split-time">${finishTime}</div>`;
-    const dotCls = (isLast && isDone) ? "split-dot finish done" : isDone ? "split-dot done" : isCurrent ? "split-dot current" : "split-dot";
-    const itemCls = isDone ? "split-item done" : "split-item";
-    const icon = isDone ? "✓" : isCurrent ? "●" : "";
-    const short = sp.replace("Passo ","");
-    splitsHtml += `<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${short}</div>${timeHtml}</div>`;
+    if(sp==="Arrivo"&&hasFinished) timeHtml=`<div class="split-time">${finishTime}</div>`;
+    const dotCls=(isLast&&isDone)?"split-dot finish done":isDone?"split-dot done":isCurrent?"split-dot current":"split-dot";
+    const itemCls=isDone?"split-item done":"split-item";
+    const icon=isDone?"✓":isCurrent?"●":"";
+    const short=sp.replace("Passo ","");
+    splitsHtml+=`<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${short}</div>${timeHtml}</div>`;
   });
-  splitsHtml += "</div>";
+  splitsHtml+="</div>";
 
-  const statsHtml = (row && !err) ? `<div class="card-stats">
-    ${rank && rank !== "n.a." ? `<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>` : ""}
-    ${hasFinished ? `<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value">${finishTime}</div></div>` : ""}
-    ${row[7] && row[7] !== "n.a." && row[7].trim() ? `<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>` : ""}
-  </div>` : "";
+  const statsHtml=(row&&!err)?`<div class="card-stats">
+    ${rank&&rank!=="n.a."?`<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>`:""}
+    ${hasFinished?`<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value">${finishTime}</div></div>`:""}
+    ${row[7]&&row[7]!=="n.a."&&row[7].trim()?`<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>`:""}
+  </div>`:"";
 
-  card.innerHTML = `
+  card.innerHTML=`
     <div class="card-header">
       <div class="card-bib" style="color:${athlete.color}">${athlete.bib}</div>
-      <div style="flex:1">
-        <div class="card-name">${esc(name)}</div>
-        ${club ? `<div class="card-club">${esc(club)}</div>` : ""}
-      </div>
+      <div style="flex:1"><div class="card-name">${esc(name)}</div>${club?`<div class="card-club">${esc(club)}</div>`:""}</div>
       <span class="race-badge" style="background:${athlete.color}22;color:${athlete.color}">${athlete.raceLabel}</span>
       ${statusHtml}
     </div>
+    ${gpsHtml}
     <div class="card-progress">
-      <div class="progress-label">
-        <span>Percorso</span>
-        <strong>${kmDone} / ${athlete.totalKm} km${pct > 0 ? " · " + pct + "%" : ""}</strong>
-      </div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar${hasFinished?" done":""}" style="width:${pct}%"></div>
-      </div>
+      <div class="progress-label"><span>Percorso (checkpoint)</span><strong>${kmDone} / ${athlete.totalKm} km${pct>0?" · "+pct+"%":""}</strong></div>
+      <div class="progress-bar-wrap"><div class="progress-bar${hasFinished?" done":""}" style="width:${pct}%"></div></div>
     </div>
-    <div class="card-splits">
-      <div class="splits-label">Checkpoint</div>
-      ${splitsHtml}
-    </div>
-    ${statsHtml}
-    <a class="map-btn" href="https://www.geotracks.co.uk/live/" target="_blank">🗺️ Mappa GPS live</a>
-  `;
+    <div class="card-splits"><div class="splits-label">Checkpoint</div>${splitsHtml}</div>
+    ${statsHtml}`;
 }
 
-function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-
-function toggleAuto() {
-  autoRefresh = !autoRefresh;
-  document.getElementById("autoToggle").className = "toggle" + (autoRefresh ? " on" : "");
-  document.getElementById("autoLabel").textContent = autoRefresh ? "Auto ✓" : "Auto";
-  if (autoTimer) clearInterval(autoTimer);
-  if (autoRefresh) autoTimer = setInterval(refreshAll, 60000);
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function toggleAuto(){
+  autoRefresh=!autoRefresh;
+  document.getElementById("autoToggle").className="toggle"+(autoRefresh?" on":"");
+  document.getElementById("autoLabel").textContent=autoRefresh?"Auto ✓":"Auto";
+  if(autoTimer) clearInterval(autoTimer);
+  if(autoRefresh) autoTimer=setInterval(refreshAll,30000);
 }
 </script>
 </body>
