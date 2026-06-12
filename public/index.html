@@ -7,21 +7,67 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
 :root {
-  --bg: #0d1117; --surface: #161b22; --border: #21262d;
-  --text: #e6edf3; --muted: #7d8590; --accent: #f97316;
-  --green: #3fb950; --blue: #58a6ff; --red: #f85149;
+  --bg: #0a0f14;
+  --surface: rgba(18,26,34,0.82);
+  --border: rgba(255,255,255,0.09);
+  --text: #e8eff6;
+  --muted: #7a8fa0;
+  --accent: #e8873a;
+  --green: #4caf7d;
+  --blue: #6ab0d4;
+  --red: #e05a4e;
+  --rock: #8fa3b0;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
-header {
-  border-bottom:1px solid var(--border); padding:14px 20px;
-  display:flex; align-items:center; gap:14px;
-  position:sticky; top:0; background:rgba(13,17,23,0.95);
-  backdrop-filter:blur(8px); z-index:100;
+
+body {
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  min-height:100vh;
+  position:relative;
 }
-.logo { font-weight:900; font-size:18px; letter-spacing:-0.5px; color:var(--accent); }
+
+/* Background */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image: url('/civetta.jpg');
+  background-size:cover;
+  background-position:center 30%;
+  background-attachment:fixed;
+  filter: brightness(0.18) saturate(0.5) sepia(0.3);
+  z-index:0;
+}
+/* Subtle mountain outline overlay using CSS gradient */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(100,130,150,0.06) 0%, transparent 70%),
+    linear-gradient(to bottom, rgba(10,15,20,0.55) 0%, rgba(10,15,20,0.2) 40%, rgba(10,15,20,0.6) 100%);
+  z-index:0;
+}
+
+header, main, footer { position:relative; z-index:1; }
+
+header {
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  position:sticky;
+  top:0;
+  background:rgba(8,13,18,0.88);
+  backdrop-filter:blur(12px);
+  z-index:100;
+}
+.logo { font-weight:900; font-size:20px; letter-spacing:-0.5px; color:var(--accent); }
 .logo span { color:var(--text); }
-.header-sub { font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+.logo-sub { font-size:10px; color:var(--rock); font-family:'JetBrains Mono',monospace; letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
 .header-actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
 .refresh-btn {
   background:var(--accent); color:#fff; border:none; border-radius:6px;
@@ -31,63 +77,109 @@ header {
 .refresh-btn:hover { opacity:0.85; }
 .refresh-btn:disabled { opacity:0.4; cursor:not-allowed; }
 .toggle-wrap { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
-.toggle { width:32px; height:18px; background:var(--border); border-radius:9px; position:relative; cursor:pointer; border:none; transition:background 0.2s; }
+.toggle { width:32px; height:18px; background:rgba(255,255,255,0.12); border-radius:9px; position:relative; cursor:pointer; border:none; transition:background 0.2s; }
 .toggle.on { background:var(--accent); }
 .toggle::after { content:''; position:absolute; width:12px; height:12px; border-radius:50%; background:#fff; top:3px; left:3px; transition:left 0.2s; }
 .toggle.on::after { left:17px; }
 .status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
-.status-dot.live { background:var(--green); box-shadow:0 0 6px var(--green); animation:pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.status-dot.live { background:var(--green); box-shadow:0 0 6px var(--green); animation:pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
 main { padding:20px; max-width:960px; margin:0 auto; }
+
 .cards-grid { display:grid; gap:14px; }
-.athlete-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color 0.3s; }
-.athlete-card.finished { border-color:var(--green); }
-.athlete-card.dnf { border-color:var(--red); opacity:0.7; }
-.card-header { padding:14px 16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); }
-.card-bib { font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px; min-width:46px; }
+
+.athlete-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  backdrop-filter:blur(10px);
+  transition:border-color 0.3s, box-shadow 0.3s;
+  box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+.athlete-card:hover { box-shadow:0 6px 32px rgba(0,0,0,0.55); }
+.athlete-card.finished { border-color:rgba(76,175,125,0.5); }
+.athlete-card.dnf     { border-color:rgba(224,90,78,0.4); opacity:0.7; }
+
+.card-header {
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  border-bottom:1px solid var(--border);
+}
+.card-bib { font-family:'JetBrains Mono',monospace; font-weight:600; font-size:22px; min-width:50px; }
 .card-name { font-weight:700; font-size:15px; flex:1; }
 .card-club { font-size:11px; color:var(--muted); margin-top:2px; }
-.race-badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; font-family:'JetBrains Mono',monospace; white-space:nowrap; }
-.card-status { font-size:11px; font-weight:600; padding:3px 8px; border-radius:4px; white-space:nowrap; }
-.status-running { background:rgba(249,115,22,0.15); color:var(--accent); }
-.status-done { background:rgba(63,185,80,0.15); color:var(--green); }
-.status-dnf { background:rgba(248,81,73,0.15); color:var(--red); }
-.status-wait { background:rgba(125,133,144,0.15); color:var(--muted); }
+.race-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:5px; font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+.card-status { font-size:11px; font-weight:600; padding:3px 9px; border-radius:5px; white-space:nowrap; }
+.status-running { background:rgba(232,135,58,0.18); color:var(--accent); }
+.status-done    { background:rgba(76,175,125,0.18); color:var(--green); }
+.status-dnf     { background:rgba(224,90,78,0.18);  color:var(--red); }
+.status-wait    { background:rgba(122,143,160,0.18); color:var(--muted); }
+
 .card-progress { padding:14px 16px; border-bottom:1px solid var(--border); }
-.progress-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; display:flex; justify-content:space-between; }
-.progress-bar-wrap { background:var(--border); border-radius:4px; height:6px; overflow:hidden; }
-.progress-bar { height:6px; border-radius:4px; background:var(--accent); transition:width 0.5s; }
+.progress-label {
+  font-size:10px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:8px;
+  display:flex; justify-content:space-between;
+}
+.progress-label strong { color:var(--text); font-weight:600; }
+.progress-bar-wrap { background:rgba(255,255,255,0.08); border-radius:4px; height:6px; overflow:hidden; }
+.progress-bar { height:6px; border-radius:4px; background:var(--accent); transition:width 0.6s ease; min-width:2px; }
 .progress-bar.done { background:var(--green); }
+
 .card-splits { padding:12px 16px 14px; }
 .splits-label { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
 .splits-timeline { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:4px; }
 .split-item { display:flex; flex-direction:column; align-items:center; flex:1; min-width:64px; position:relative; }
-.split-item:not(:last-child)::after { content:''; position:absolute; top:10px; left:50%; width:100%; height:2px; background:var(--border); z-index:0; }
-.split-item.done:not(:last-child)::after { background:var(--accent); opacity:0.7; }
-.split-dot { width:20px; height:20px; border-radius:50%; border:2px solid var(--border); background:var(--surface); z-index:1; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; margin-bottom:6px; }
-.split-dot.done { border-color:var(--accent); background:var(--accent); color:#fff; }
+.split-item:not(:last-child)::after { content:''; position:absolute; top:10px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.08); z-index:0; }
+.split-item.done:not(:last-child)::after { background:var(--accent); opacity:0.6; }
+.split-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); background:rgba(10,15,20,0.6); z-index:1; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; margin-bottom:6px; }
+.split-dot.done    { border-color:var(--accent); background:var(--accent); color:#fff; }
 .split-dot.finish.done { border-color:var(--green); background:var(--green); }
-.split-dot.current { border-color:var(--accent); background:var(--bg); color:var(--accent); animation:pulse 1.5s infinite; }
+.split-dot.current { border-color:var(--accent); background:rgba(10,15,20,0.8); color:var(--accent); animation:pulse-dot 1.5s infinite; }
 .split-label { font-size:10px; color:var(--muted); text-align:center; line-height:1.3; }
-.split-time { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:var(--accent); text-align:center; margin-top:2px; }
+.split-time  { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:var(--accent); text-align:center; margin-top:2px; }
 .split-item.done .split-label { color:var(--text); }
+
 .card-stats { padding:0 16px 14px; display:flex; gap:20px; flex-wrap:wrap; }
 .stat { display:flex; flex-direction:column; gap:2px; }
 .stat-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; }
-.stat-value { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; }
+.stat-value { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:var(--text); }
 .stat-value.hi { color:var(--accent); }
-.map-btn { margin:0 16px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(88,166,255,0.1); color:var(--blue); border:1px solid rgba(88,166,255,0.3); border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; text-decoration:none; cursor:pointer; transition:background 0.15s; }
-.map-btn:hover { background:rgba(88,166,255,0.2); }
-.last-update { text-align:center; font-size:11px; color:var(--muted); margin-top:20px; font-family:'JetBrains Mono',monospace; }
-.error-banner { background:rgba(248,81,73,0.1); border:1px solid rgba(248,81,73,0.3); border-radius:8px; padding:12px 16px; color:var(--red); font-size:13px; margin-bottom:14px; }
+
+.map-btn {
+  margin:0 16px 14px;
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(106,176,212,0.1); color:var(--blue);
+  border:1px solid rgba(106,176,212,0.25); border-radius:6px;
+  padding:6px 12px; font-size:12px; font-weight:600;
+  text-decoration:none; transition:background 0.15s;
+}
+.map-btn:hover { background:rgba(106,176,212,0.2); }
+
+.last-update { text-align:center; font-size:11px; color:var(--muted); margin-top:20px; padding-bottom:40px; font-family:'JetBrains Mono',monospace; }
+
+/* Mountain silhouette decoration at bottom */
+.mountain-deco {
+  position:fixed; bottom:0; left:0; right:0; height:120px;
+  background:linear-gradient(to top, rgba(8,13,18,0.7) 0%, transparent 100%);
+  z-index:0; pointer-events:none;
+}
+
 @keyframes spin { to { transform:rotate(360deg); } }
 .spinning { display:inline-block; animation:spin 0.8s linear infinite; }
 </style>
 </head>
 <body>
+<div class="mountain-deco"></div>
 <header>
-  <div class="logo">DXT<span> '26</span></div>
-  <div class="header-sub">Forno di Zoldo · 12-14 Giugno</div>
+  <div>
+    <div class="logo">DXT<span> '26</span></div>
+    <div class="logo-sub">Val di Zoldo · Dolomiti</div>
+  </div>
   <div class="header-actions">
     <div class="toggle-wrap">
       <button class="toggle" id="autoToggle" onclick="toggleAuto()"></button>
@@ -99,39 +191,35 @@ main { padding:20px; max-width:960px; margin:0 auto; }
     </button>
   </div>
 </header>
+
 <main>
-  <div id="errorBanner" style="display:none" class="error-banner"></div>
   <div class="cards-grid" id="cardsContainer">
-    <div style="text-align:center;padding:60px 20px;color:var(--muted)">
-      <div style="font-size:40px;margin-bottom:16px">⛰️</div>
-      <div style="font-size:16px;color:var(--text);margin-bottom:8px">DXT 2026 Tracker</div>
-      <div>Premi Aggiorna per caricare i dati</div>
+    <div style="text-align:center;padding:80px 20px;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px">⛰️</div>
+      <div style="font-size:17px;color:var(--text);font-weight:600;margin-bottom:8px">DXT 2026 · Tracker</div>
+      <div style="color:var(--rock)">Premi Aggiorna per caricare i dati in tempo reale</div>
     </div>
   </div>
   <div class="last-update" id="lastUpdate"></div>
 </main>
+
 <script>
 const ATHLETES = [
-  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#f97316",
+  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,11,38,62,84,103], totalKm:103,
-    geoId:"103K" },
-  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#58a6ff",
+    splitKm:[0,11,38,62,84,103], totalKm:103 },
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,22,50,62,72], totalKm:72,
-    geoId:"72K" },
-  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#58a6ff",
+    splitKm:[0,22,50,62,72], totalKm:72 },
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,22,50,62,72], totalKm:72,
-    geoId:"72K" },
-  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#3fb950",
+    splitKm:[0,22,50,62,72], totalKm:72 },
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
-    splitKm:[0,11,28,55], totalKm:55,
-    geoId:"55K" },
-  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#3fb950",
+    splitKm:[0,11,28,55], totalKm:55 },
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
-    splitKm:[0,11,28,55], totalKm:55,
-    geoId:"55K" },
+    splitKm:[0,11,28,55], totalKm:55 },
 ];
 
 const INTER_LISTS = {
@@ -152,14 +240,12 @@ const INTER_LISTS = {
   ],
 };
 
-let autoRefresh = false;
-let autoTimer = null;
-let cachedData = {};
+let autoRefresh = false, autoTimer = null;
 
 async function fetchProxy(listname, contest, bib) {
   const url = `/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error("API error " + r.status);
+  if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
 
@@ -170,10 +256,8 @@ function findBib(data, bib) {
     if (typeof g === "object" && !Array.isArray(g)) {
       for (const sk of Object.keys(g)) {
         const rows = g[sk];
-        if (Array.isArray(rows)) {
-          for (const row of rows) {
-            if (Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
-          }
+        if (Array.isArray(rows)) for (const row of rows) {
+          if (Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
         }
       }
     } else if (Array.isArray(g)) {
@@ -190,10 +274,8 @@ async function loadAthlete(athlete) {
     fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA", athlete.contest, athlete.bib),
     ...INTER_LISTS[athlete.contest].map(il => fetchProxy(il.list, "0", athlete.bib))
   ]);
-
   let mainRow = null;
   if (mainRes.status === "fulfilled") mainRow = findBib(mainRes.value?.data, athlete.bib);
-
   const splits = {};
   INTER_LISTS[athlete.contest].forEach((il, i) => {
     if (splitRes[i].status === "fulfilled") {
@@ -201,7 +283,6 @@ async function loadAthlete(athlete) {
       if (row) splits[il.label] = row;
     }
   });
-
   return { mainRow, splits };
 }
 
@@ -209,100 +290,80 @@ async function refreshAll() {
   const btn = document.getElementById("refreshBtn");
   const icon = document.getElementById("refreshIcon");
   const dot = document.getElementById("statusDot");
-  btn.disabled = true;
-  icon.className = "spinning";
-  dot.className = "status-dot live";
-  document.getElementById("errorBanner").style.display = "none";
-
+  btn.disabled = true; icon.className = "spinning"; dot.className = "status-dot live";
   const container = document.getElementById("cardsContainer");
-  // Remove empty state
-  const empty = container.querySelector("div[style*='padding:60px']");
+  const empty = container.querySelector("div[style*='padding:80px']");
   if (empty) empty.remove();
-
   const results = await Promise.allSettled(ATHLETES.map(a => loadAthlete(a)));
-
   results.forEach((res, i) => {
-    const athlete = ATHLETES[i];
-    if (res.status === "fulfilled") {
-      cachedData[athlete.bib] = res.value;
-      renderCard(athlete, res.value.mainRow, res.value.splits);
-    } else {
-      renderCard(athlete, null, {}, res.reason?.message);
-    }
+    const a = ATHLETES[i];
+    if (res.status === "fulfilled") renderCard(a, res.value.mainRow, res.value.splits);
+    else renderCard(a, null, {}, res.reason?.message);
   });
-
   const now = new Date().toLocaleTimeString("it-IT");
-  document.getElementById("lastUpdate").textContent = "Ultimo aggiornamento: " + now;
-  btn.disabled = false;
-  icon.className = "";
-  icon.textContent = "↻";
+  document.getElementById("lastUpdate").textContent = "⟳ Aggiornato alle " + now;
+  btn.disabled = false; icon.className = ""; icon.textContent = "↻";
   setTimeout(() => dot.className = "status-dot", 3000);
 }
 
 function renderCard(athlete, row, splits, err) {
   const container = document.getElementById("cardsContainer");
-  const cardId = "card-" + athlete.bib;
-  let card = document.getElementById(cardId);
+  let card = document.getElementById("card-" + athlete.bib);
   if (!card) {
     card = document.createElement("div");
-    card.id = cardId;
+    card.id = "card-" + athlete.bib;
     card.className = "athlete-card";
     container.appendChild(card);
   }
-
   const finishTime = row?.[6]?.trim();
   const hasFinished = finishTime && finishTime !== "" && finishTime !== "n.a." && !finishTime.startsWith("C(");
   const isDNF = row?.[2] && String(row[2]).includes("DNF");
   const rank = row?.[2] || null;
   const name = row?.[3] || athlete.name;
-  const club = row?.[5] || "";
+  const club = (row?.[5] || "").trim();
 
   card.className = "athlete-card" + (hasFinished ? " finished" : isDNF ? " dnf" : "");
 
-  // Progress
-  let lastPassedIdx = 0;
+  // Calcola km percorsi dall'ultimo checkpoint passato
+  let lastIdx = 0;
   athlete.splits.forEach((sp, i) => {
-    if (sp === "Partenza") { lastPassedIdx = Math.max(lastPassedIdx, 0); return; }
-    if (splits[sp]) lastPassedIdx = Math.max(lastPassedIdx, i);
-    if (hasFinished && sp === "Arrivo") lastPassedIdx = athlete.splits.length - 1;
+    if (splits[sp]) lastIdx = i;
+    if (hasFinished && sp === "Arrivo") lastIdx = athlete.splits.length - 1;
   });
-  if (hasFinished) lastPassedIdx = athlete.splits.length - 1;
-  const kmDone = athlete.splitKm[lastPassedIdx] || 0;
-  const pct = Math.round((kmDone / athlete.totalKm) * 100);
+  if (hasFinished) lastIdx = athlete.splits.length - 1;
+  const kmDone = athlete.splitKm[lastIdx] || 0;
+  const pct = Math.min(100, Math.round((kmDone / athlete.totalKm) * 100));
 
   const statusHtml = err
-    ? `<span class="card-status status-wait">Errore</span>`
-    : isDNF
-    ? `<span class="card-status status-dnf">Ritirato</span>`
-    : hasFinished
-    ? `<span class="card-status status-done">✓ Arrivato</span>`
+    ? `<span class="card-status status-wait">—</span>`
+    : isDNF ? `<span class="card-status status-dnf">Ritirato</span>`
+    : hasFinished ? `<span class="card-status status-done">✓ Arrivato</span>`
     : `<span class="card-status status-running">In gara</span>`;
 
   let splitsHtml = '<div class="splits-timeline">';
   athlete.splits.forEach((sp, i) => {
-    const isDone = i === 0 || !!splits[sp] || (sp === "Arrivo" && hasFinished) || i <= lastPassedIdx;
+    const isDone = i === 0 || !!splits[sp] || (sp==="Arrivo" && hasFinished) || i <= lastIdx;
     const isLast = i === athlete.splits.length - 1;
-    const isCurrent = !isDone && i > 0 && (i - 1) <= lastPassedIdx && lastPassedIdx < athlete.splits.length - 1;
+    const isCurrent = !isDone && i > 0 && (i-1) <= lastIdx;
     let timeHtml = "";
     if (sp !== "Partenza" && splits[sp]) {
-      const t = splits[sp][6] || "";
+      const t = Array.isArray(splits[sp]) ? splits[sp][6] : "";
       if (t && t !== "n.a.") timeHtml = `<div class="split-time">${t}</div>`;
     }
     if (sp === "Arrivo" && hasFinished) timeHtml = `<div class="split-time">${finishTime}</div>`;
     const dotCls = (isLast && isDone) ? "split-dot finish done" : isDone ? "split-dot done" : isCurrent ? "split-dot current" : "split-dot";
     const itemCls = isDone ? "split-item done" : "split-item";
     const icon = isDone ? "✓" : isCurrent ? "●" : "";
-    const short = sp.replace("Passo ","").replace("pass ","");
+    const short = sp.replace("Passo ","");
     splitsHtml += `<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${short}</div>${timeHtml}</div>`;
   });
   splitsHtml += "</div>";
 
-  const statsHtml = row && !err ? `
-    <div class="card-stats">
-      ${rank && rank !== "n.a." ? `<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>` : ""}
-      ${hasFinished ? `<div class="stat"><div class="stat-label">Tempo</div><div class="stat-value">${finishTime}</div></div>` : ""}
-      ${row[7] && row[7] !== "n.a." && row[7].trim() ? `<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>` : ""}
-    </div>` : "";
+  const statsHtml = (row && !err) ? `<div class="card-stats">
+    ${rank && rank !== "n.a." ? `<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>` : ""}
+    ${hasFinished ? `<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value">${finishTime}</div></div>` : ""}
+    ${row[7] && row[7] !== "n.a." && row[7].trim() ? `<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>` : ""}
+  </div>` : "";
 
   card.innerHTML = `
     <div class="card-header">
@@ -317,7 +378,7 @@ function renderCard(athlete, row, splits, err) {
     <div class="card-progress">
       <div class="progress-label">
         <span>Percorso</span>
-        <span>${kmDone} / ${athlete.totalKm} km${pct > 0 ? " · " + pct + "%" : ""}</span>
+        <strong>${kmDone} / ${athlete.totalKm} km${pct > 0 ? " · " + pct + "%" : ""}</strong>
       </div>
       <div class="progress-bar-wrap">
         <div class="progress-bar${hasFinished?" done":""}" style="width:${pct}%"></div>
