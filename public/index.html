@@ -612,43 +612,49 @@ function initChart(chartId, athlete, gpx, gpsIdx){
   const step = Math.max(1, Math.floor(gpx.length/200));
   const sampledPts = [];
   for(let i=0;i<gpx.length;i+=step) sampledPts.push(gpx[i]);
-  if(sampledPts[sampledPts.length-1] !== gpx[gpx.length-1]) sampledPts.push(gpx[gpx.length-1]);
+  if(sampledPts[sampledPts.length-1] !== gpx[gpx.length-1])
+    sampledPts.push(gpx[gpx.length-1]);
 
-  // Dataset unico: {x: km, y: quota}
-  const profileData = sampledPts.map(p => ({ x: p[3]/1000, y: p[2] }));
+  // Labels = km come stringa, values = quota
+  const labels = sampledPts.map(p => (p[3]/1000).toFixed(1));
+  const eles   = sampledPts.map(p => p[2]);
 
-  // Posizione atleta: km e quota esatti
-  const posKm  = gpsIdx !== null ? gpx[gpsIdx][3]/1000 : null;
-  const posEle = gpsIdx !== null ? gpx[gpsIdx][2]      : null;
+  // Trova l'indice nel campionamento più vicino alla posizione GPS
+  // confrontando i km del punto GPX originale con i km dei campioni
+  let dotIndex = null;
+  if(gpsIdx !== null){
+    const posKmReal = gpx[gpsIdx][3]/1000;
+    let bestDiff = Infinity;
+    sampledPts.forEach((p, i) => {
+      const diff = Math.abs(p[3]/1000 - posKmReal);
+      if(diff < bestDiff){ bestDiff=diff; dotIndex=i; }
+    });
+  }
+
+  // pointRadius array: 0 ovunque, grande solo sul punto posizione
+  const radii = eles.map((_, i) => i === dotIndex ? 8 : 0);
+  const bColors = eles.map((_, i) => i === dotIndex ? athlete.color : 'transparent');
+  const bWidth  = eles.map((_, i) => i === dotIndex ? 2.5 : 0);
+
+  const minEle = Math.min(...eles);
+  const maxEle = Math.max(...eles);
 
   const chart = new Chart(canvas, {
     type:'line',
     data:{
-      datasets:[
-        {
-          // Profilo altimetrico
-          data: profileData,
-          borderColor: athlete.color,
-          borderWidth: 2,
-          fill: true,
-          backgroundColor: `${athlete.color}22`,
-          pointRadius: 0,
-          tension: 0.3,
-          order: 2,
-        },
-        ...(posKm !== null ? [{
-          // Puntino posizione atleta — scatter sovrapposto
-          type: 'scatter',
-          data: [{ x: posKm, y: posEle }],
-          pointRadius: 8,
-          pointHoverRadius: 10,
-          pointBackgroundColor: athlete.color,
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2.5,
-          showLine: false,
-          order: 1,
-        }] : []),
-      ]
+      labels,
+      datasets:[{
+        data: eles,
+        borderColor: athlete.color,
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: `${athlete.color}22`,
+        pointRadius: radii,
+        pointBackgroundColor: bColors,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: bWidth,
+        tension: 0.3,
+      }]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -656,34 +662,31 @@ function initChart(chartId, athlete, gpx, gpsIdx){
       plugins:{
         legend:{display:false},
         tooltip:{
-          filter: ctx => ctx.datasetIndex === 0,
           callbacks:{
-            title: ctx => `km ${ctx[0].parsed.x.toFixed(1)}`,
-            label: ctx => `${Math.round(ctx.parsed.y)}m slm`
+            title: ctx => `km ${ctx[0].label}`,
+            label: ctx => `${Math.round(ctx.raw)}m slm`
           }
         },
-        annotation:{},
       },
       scales:{
         x:{
-          type:'linear',
-          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8,callback:v=>v+'km'},
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8},
           grid:{color:'rgba(255,255,255,0.05)'},
           title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}},
-          min:0,
         },
         y:{
           ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:6,callback:v=>v+'m'},
           grid:{color:'rgba(255,255,255,0.07)'},
           title:{display:true,text:'quota (m slm)',color:'#7a8fa0',font:{size:9}},
-          suggestedMin: Math.min(...eles)-50,
-          suggestedMax: Math.max(...eles)+50,
+          suggestedMin: minEle - 50,
+          suggestedMax: maxEle + 50,
         }
       }
     }
   });
   chartObjects[chartId] = chart;
 }
+
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 // Tick ogni secondo per aggiornare i timer
