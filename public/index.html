@@ -194,19 +194,19 @@ function formatTimer(contest, finishTime, isDNF){
 const RACE_TOTALS = { "1": 407, "2": 393, "3": 650 };
 
 const ATHLETES = [
-  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", gpxFile:"103k",
+  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", geoId:"323839", gpxFile:"103k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,11,38,62,84,103], totalKm:103 },
-  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", gpxFile:"72k",
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", gpxFile:"72k",
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,22,50,62,72], totalKm:72 },
-  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", gpxFile:"55k",
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
-  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", gpxFile:"55k",
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,28,55], totalKm:55 },
 ];
@@ -218,7 +218,7 @@ const INTER_LISTS = {
 };
 
 // Cache
-let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {};
+let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {}, geoIdCache = {};
 let autoRefresh = false, autoTimer = null;
 let startTimes = {};  // bib -> timestamp partenza stimata
 
@@ -281,9 +281,22 @@ async function fetchGPS(eventId){
   if(!r.ok) return {};
   const data = await r.json();
   const byBib = {};
-  for(const p of (data.data||[])) byBib[String(p.la)] = p;
+  for(const p of (data.data||[])){
+    byBib[String(p.la)] = p;
+    // Salva ID interno (campo 'i') per usarlo nel dettaglio
+    geoIdCache[`${eventId}_${p.la}`] = p.i;
+  }
   gpsCache[eventId] = byBib;
   return byBib;
+}
+
+async function fetchGPSDetail(eventId, geoId){
+  if(!geoId) return null;
+  try {
+    const r = await fetch(`/api/raceresult?action=gpsdetail&eventId=${eventId}&participantId=${geoId}`);
+    if(!r.ok) return null;
+    return r.json();
+  } catch(e){ return null; }
 }
 
 async function fetchGPX(raceName){
@@ -391,6 +404,12 @@ async function refreshAll(){
     Promise.all(uniqueGpx.map(n => fetchGPX(n))),
   ]);
 
+  // Fetch dettagli GPS (ETA, velocità) per ogni atleta con GPS attivo
+  const detailResults = await Promise.all(ATHLETES.map(a => {
+    const geoId = a.geoId || geoIdCache[`${a.geoEvent}_${a.bib}`] || null;
+    return geoId ? fetchGPSDetail(a.geoEvent, geoId) : Promise.resolve(null);
+  }));
+
   const gpsByEvent = {};
   uniqueEvents.forEach((id,i) => gpsByEvent[id] = gpsResults[i]);
   const gpxByName = {};
@@ -401,7 +420,8 @@ async function refreshAll(){
     const gpsData = gpsByEvent[a.geoEvent]?.[a.bib] || null;
     const gpxData = gpxByName[a.gpxFile] || null;
     const gpsRank = calcGPSRank(a, gpsByEvent, gpxByName);
-    renderCard(a, res.mainRow, res.splits, gpsData, gpxData, gpsRank);
+    const detail  = detailResults[i] || null;
+    renderCard(a, res.mainRow, res.splits, gpsData, gpxData, gpsRank, detail);
   });
 
   const now = new Date().toLocaleTimeString("it-IT");
@@ -416,7 +436,7 @@ function formatElapsed(start){
   return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
-function renderCard(athlete, row, splits, gps, gpx, gpsRank){
+function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   const container = document.getElementById("cardsContainer");
   const cardId = "card-"+athlete.bib;
   let card = document.getElementById(cardId);
@@ -560,18 +580,40 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank){
   const mapId = "map-"+athlete.bib;
   const chartId = "chart-"+athlete.bib;
 
-  // ETA stima arrivo
-  const eta = (!hasFinished && !isDNF) ? calcETA(athlete, kmGPS, gpx, gpsIdx) : null;
-  const etaHtml = eta ? `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <span>🏁</span>
-    <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${eta.time}</strong></span>
-    <span>${eta.remaining}</span>
-    <span style="opacity:0.3">·</span>
-    <span>~${eta.paceMin} min/km</span>
-    <span style="opacity:0.3">·</span>
-    <span>D+ rim. ${eta.dpRem}m · D- ${eta.dnRem}m</span>
-    <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">Fattore K</span>
-  </div>` : '';
+  // ETA da GeoTracks (dati reali) oppure fallback calcolo locale
+  let etaHtml = '';
+  if(!hasFinished && !isDNF){
+    if(detail && detail.totalTime && detail.totalTime !== '00:00:00'){
+      // Calcola orario arrivo: start + totalTime
+      const start = RACE_START[athlete.contest];
+      const [th,tm,ts] = detail.totalTime.split(':').map(Number);
+      const etaDate = new Date(start.getTime() + (th*3600+tm*60+ts)*1000);
+      const hh = etaDate.getHours().toString().padStart(2,'0');
+      const mm = etaDate.getMinutes().toString().padStart(2,'0');
+      const speed = detail.speed || '';
+      const nextCp = detail.nextCp || '';
+      etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>🏁</span>
+        <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${hh}:${mm}</strong></span>
+        <span style="opacity:0.3">·</span>
+        <span>${detail.timeLeft ? 'tra ' + detail.timeLeft.slice(0,5) : ''}</span>
+        ${speed ? `<span style="opacity:0.3">·</span><span>${speed}</span>` : ''}
+        ${nextCp ? `<span style="opacity:0.3">·</span><span>prossimo CP: ${nextCp.slice(0,5)}</span>` : ''}
+        <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">GeoTracks</span>
+      </div>`;
+    } else if(kmGPS !== null){
+      // Fallback: stima locale Fattore K
+      const eta = calcETA(athlete, kmGPS, gpx, gpsIdx);
+      if(eta) etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>🏁</span>
+        <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${eta.time}</strong></span>
+        <span>${eta.remaining}</span>
+        <span style="opacity:0.3">·</span>
+        <span>~${eta.paceMin} min/km</span>
+        <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">stima locale</span>
+      </div>`;
+    }
+  }
 
   card.innerHTML = `
     <div class="card-header">
