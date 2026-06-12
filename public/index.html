@@ -97,6 +97,14 @@ main{padding:20px;max-width:1000px;margin:0 auto;}
 .stat-value.hi{color:var(--accent);}
 .last-update{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;padding-bottom:40px;font-family:'JetBrains Mono',monospace;}
 @keyframes spin{to{transform:rotate(360deg);}}
+/* TIMER */
+.card-timer{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);}
+.timer-icon{font-size:14px;}
+.timer-text{flex:1;font-size:12px;color:var(--muted);}
+.timer-value{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--text);}
+.timer-value.running{color:var(--accent);}
+.timer-value.finished{color:var(--green);}
+
 .spinning{display:inline-block;animation:spin 0.8s linear infinite;}
 
 /* Leaflet dark overrides */
@@ -137,6 +145,35 @@ main{padding:20px;max-width:1000px;margin:0 auto;}
   <div class="last-update" id="lastUpdate"></div>
 </main>
 <script>
+
+// Orari partenza ufficiali (UTC+2 = ora italiana)
+const RACE_START = {
+  "1": new Date("2026-06-12T22:00:00+02:00"), // 103K venerdi 22:00
+  "2": new Date("2026-06-13T00:00:00+02:00"), // 72K  sabato 00:00
+  "3": new Date("2026-06-13T05:30:00+02:00"), // 55K  sabato 05:30
+};
+
+function formatTimer(contest, finishTime, isDNF){
+  const start = RACE_START[contest];
+  const now = new Date();
+  if(isDNF) return {value:"Ritirato", cls:"", icon:"❌"};
+  if(finishTime && finishTime !== "n.a." && !finishTime.startsWith("C(")){
+    // Già arrivato - mostra il tempo finale
+    return {value: finishTime, cls:"finished", icon:"🏁"};
+  }
+  if(now < start){
+    const diff = start - now;
+    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+    return {value: `Partenza tra ${h}h ${String(m).padStart(2,"0")}m`, cls:"", icon:"⏳"};
+  }
+  // In gara
+  const elapsed = now - start;
+  const h = Math.floor(elapsed/3600000);
+  const m = Math.floor((elapsed%3600000)/60000);
+  const s = Math.floor((elapsed%60000)/1000);
+  return {value: `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`, cls:"running", icon:"⏱️"};
+}
+
 const ATHLETES = [
   { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", gpxFile:"103k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
@@ -353,6 +390,14 @@ function renderCard(athlete, row, splits, gps, gpx){
   });
   splitsHtml+="</div>";
 
+  // Timer
+  const timer = formatTimer(athlete.contest, finishTime, isDNF);
+  const timerHtml = `<div class="card-timer">
+    <span class="timer-icon">${timer.icon}</span>
+    <span class="timer-text">Tempo in gara</span>
+    <span class="timer-value ${timer.cls}">${timer.value}</span>
+  </div>`;
+
   const statsHtml = row?`<div class="card-stats">
     ${rank&&rank!=="n.a."?`<div class="stat"><div class="stat-label">Posizione</div><div class="stat-value hi">#${rank}</div></div>`:""}
     ${hasFinished?`<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value">${finishTime}</div></div>`:""}
@@ -371,6 +416,7 @@ function renderCard(athlete, row, splits, gps, gpx){
       ${statusHtml}
     </div>
     ${gpsRowHtml}
+    ${timerHtml}
     <div class="card-map-wrap">
       <div id="${mapId}" class="card-map"></div>
     </div>
@@ -516,6 +562,41 @@ function initChart(chartId, athlete, gpx, gpsIdx){
 }
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+// Tick ogni secondo per aggiornare i timer
+function tickTimers(){
+  document.querySelectorAll('.card-timer').forEach(el => {
+    const card = el.closest('.athlete-card');
+    if(!card) return;
+    const bib = card.id.replace('card-','');
+    const athlete = ATHLETES.find(a => a.bib === bib);
+    if(!athlete) return;
+    const finishEl = card.querySelector('.status-done');
+    const dnfEl = card.querySelector('.status-dnf');
+    const finishTime = finishEl ? null : null; // già gestito
+    const isDNF = !!dnfEl;
+    const hasFinished = !!finishEl;
+    // Ricostruisci solo il valore del timer
+    const timerVal = el.querySelector('.timer-value');
+    if(!timerVal) return;
+    const start = RACE_START[athlete.contest];
+    const now = new Date();
+    if(isDNF){ timerVal.textContent='Ritirato'; timerVal.className='timer-value'; return; }
+    if(hasFinished){ return; } // non toccare, mostra tempo finale
+    if(now < start){
+      const diff = start-now;
+      const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000);
+      timerVal.textContent=`Partenza tra ${h}h ${String(m).padStart(2,'0')}m`;
+      timerVal.className='timer-value';
+    } else {
+      const elapsed=now-start;
+      const h=Math.floor(elapsed/3600000), m=Math.floor((elapsed%3600000)/60000), s=Math.floor((elapsed%60000)/1000);
+      timerVal.textContent=`${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      timerVal.className='timer-value running';
+    }
+  });
+}
+setInterval(tickTimers, 1000);
+
 function toggleAuto(){
   autoRefresh=!autoRefresh;
   document.getElementById("autoToggle").className="toggle"+(autoRefresh?" on":"");
