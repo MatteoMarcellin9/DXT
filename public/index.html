@@ -222,35 +222,51 @@ let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {};
 let autoRefresh = false, autoTimer = null;
 let startTimes = {};  // bib -> timestamp partenza stimata
 
-// Calcola ETA arrivo basata su velocità media attuale
-function calcETA(athlete, kmGPS, gpx){
-  if(kmGPS === null || kmGPS < 1 || !gpx) return null;
+// Calcola ETA con Fattore K: +10km ogni 1000m D+, -5km ogni 1000m D-
+function calcElevationFactors(gpx, fromIdx, toIdx){
+  let dp = 0, dn = 0;
+  const NOISE = 2;
+  for(let i = fromIdx+1; i <= Math.min(toIdx, gpx.length-1); i++){
+    const delta = gpx[i][2] - gpx[i-1][2];
+    if(delta > NOISE) dp += delta;
+    else if(delta < -NOISE) dn += Math.abs(delta);
+  }
+  return { dp, dn };
+}
 
+function calcETA(athlete, kmGPS, gpx, gpsIdx){
+  if(kmGPS === null || kmGPS < 1 || !gpx || gpsIdx === null) return null;
   const start = RACE_START[athlete.contest];
-  const now = new Date();
+  const now   = new Date();
   if(now <= start) return null;
-
   const elapsedH = (now - start) / 3600000;
   if(elapsedH < 0.1) return null;
 
-  const paceKmH = kmGPS / elapsedH;
-  if(paceKmH < 0.5 || paceKmH > 25) return null; // sanity check
+  // Fattore K sui km già percorsi → pace equivalente
+  const { dp: dpDone, dn: dnDone } = calcElevationFactors(gpx, 0, gpsIdx);
+  const kmEqDone = kmGPS + dpDone/1000*10 - dnDone/1000*5;
+  const paceEqH  = kmEqDone / elapsedH;
+  if(paceEqH < 0.5 || paceEqH > 30) return null;
 
-  const kmRemaining = athlete.totalKm - kmGPS;
-  const etaH = kmRemaining / paceKmH;
+  // Fattore K sui km rimanenti
+  const { dp: dpRem, dn: dnRem } = calcElevationFactors(gpx, gpsIdx, gpx.length-1);
+  const kmRealRem = gpx[gpx.length-1][3]/1000 - kmGPS;
+  const kmEqRem   = kmRealRem + dpRem/1000*10 - dnRem/1000*5;
+
+  const etaH    = kmEqRem / paceEqH;
   const etaDate = new Date(now.getTime() + etaH * 3600000);
-
   const hh = etaDate.getHours().toString().padStart(2,'0');
   const mm = etaDate.getMinutes().toString().padStart(2,'0');
-
-  // Ore rimanenti per display
   const remH = Math.floor(etaH);
   const remM = Math.round((etaH - remH) * 60);
+  const paceMin = Math.round(60 / (kmGPS / elapsedH));
 
   return {
     time: `${hh}:${mm}`,
     remaining: remH > 0 ? `tra ${remH}h ${String(remM).padStart(2,'0')}m` : `tra ${remM}m`,
-    paceMin: Math.round(60 / paceKmH), // min/km
+    paceMin,
+    dpRem: Math.round(dpRem),
+    dnRem: Math.round(dnRem),
   };
 }
 
@@ -545,11 +561,16 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank){
   const chartId = "chart-"+athlete.bib;
 
   // ETA stima arrivo
-  const eta = (!hasFinished && !isDNF) ? calcETA(athlete, kmGPS, gpx) : null;
-  const etaHtml = eta ? `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+  const eta = (!hasFinished && !isDNF) ? calcETA(athlete, kmGPS, gpx, gpsIdx) : null;
+  const etaHtml = eta ? `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
     <span>🏁</span>
-    <span>Arrivo stimato: <strong style="color:var(--text)">${eta.time}</strong> · ${eta.remaining} · pace ~${eta.paceMin} min/km</span>
-    <span style="margin-left:auto;font-size:10px;opacity:0.6">stima lineare</span>
+    <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${eta.time}</strong></span>
+    <span>${eta.remaining}</span>
+    <span style="opacity:0.3">·</span>
+    <span>~${eta.paceMin} min/km</span>
+    <span style="opacity:0.3">·</span>
+    <span>D+ rim. ${eta.dpRem}m · D- ${eta.dnRem}m</span>
+    <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">Fattore K</span>
   </div>` : '';
 
   card.innerHTML = `
