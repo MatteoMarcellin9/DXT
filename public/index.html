@@ -219,6 +219,16 @@ const INTER_LISTS = {
 
 // Cache
 let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {}, geoIdCache = {};
+
+// Restituisce il nome del prossimo checkpoint non ancora passato
+function nextCheckpointName(athlete, splits){
+  const checkpointSplits = athlete.splits.slice(1); // escludi Partenza
+  for(const sp of checkpointSplits){
+    if(sp === 'Arrivo') continue;
+    if(!splits[sp]) return sp; // primo non ancora passato
+  }
+  return 'Arrivo';
+}
 let autoRefresh = false, autoTimer = null;
 let startTimes = {};  // bib -> timestamp partenza stimata
 
@@ -580,37 +590,36 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   const mapId = "map-"+athlete.bib;
   const chartId = "chart-"+athlete.bib;
 
-  // ETA da GeoTracks (dati reali) oppure fallback calcolo locale
+  // ETA da GeoTracks (dati reali) — nessun fallback
   let etaHtml = '';
   if(!hasFinished && !isDNF){
     if(detail && detail.totalTime && detail.totalTime !== '00:00:00'){
-      // Calcola orario arrivo: start + totalTime
+      // Orario arrivo: start + totalTime
       const start = RACE_START[athlete.contest];
       const [th,tm,ts] = detail.totalTime.split(':').map(Number);
       const etaDate = new Date(start.getTime() + (th*3600+tm*60+ts)*1000);
       const hh = etaDate.getHours().toString().padStart(2,'0');
       const mm = etaDate.getMinutes().toString().padStart(2,'0');
       const speed = detail.speed || '';
-      const nextCp = detail.nextCp || '';
-      etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span>🏁</span>
-        <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${hh}:${mm}</strong></span>
-        <span style="opacity:0.3">·</span>
-        <span>${detail.timeLeft ? 'tra ' + detail.timeLeft.slice(0,5) : ''}</span>
-        ${speed ? `<span style="opacity:0.3">·</span><span>${speed}</span>` : ''}
-        ${nextCp ? `<span style="opacity:0.3">·</span><span>prossimo CP: ${nextCp.slice(0,5)}</span>` : ''}
-        <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">GeoTracks</span>
-      </div>`;
-    } else if(kmGPS !== null){
-      // Fallback: stima locale Fattore K
-      const eta = calcETA(athlete, kmGPS, gpx, gpsIdx);
-      if(eta) etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span>🏁</span>
-        <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${eta.time}</strong></span>
-        <span>${eta.remaining}</span>
-        <span style="opacity:0.3">·</span>
-        <span>~${eta.paceMin} min/km</span>
-        <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">stima locale</span>
+
+      // Prossimo checkpoint non ancora passato
+      const nextCpName = nextCheckpointName(athlete, splits);
+      const nextCpTime = detail.nextCp && detail.nextCp !== '00:00:00'
+        ? detail.nextCp.slice(0,5) : null;
+
+      etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>🏁</span>
+          <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${hh}:${mm}</strong></span>
+          <span style="opacity:0.3">·</span>
+          <span>${detail.timeLeft ? 'tra ' + detail.timeLeft.slice(0,5) : ''}</span>
+          ${speed ? `<span style="opacity:0.3">·</span><span>${speed}</span>` : ''}
+          <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">GeoTracks</span>
+        </div>
+        ${nextCpTime ? `<div style="display:flex;align-items:center;gap:6px;padding-left:2px;">
+          <span>📍</span>
+          <span>Tempo previsto per arrivare a <strong style="color:var(--text)">${nextCpName}</strong>: <strong style="color:${athlete.color}">${nextCpTime}</strong></span>
+        </div>` : ''}
       </div>`;
     }
   }
