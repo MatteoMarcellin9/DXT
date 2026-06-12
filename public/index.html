@@ -446,24 +446,52 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank){
   const total = RACE_TOTALS[athlete.contest] || "?";
   const rankNum = rank && rank !== "n.a." && !String(rank).includes("DNF") ? rank : null;
 
-  // Posizione: ufficiale se disponibile, altrimenti stimata da GPS
+  // Posizione ibrida: GPS live corretto dal rank ufficiale ai checkpoint
   let posHtml = "";
-  if(rankNum){
-    // Rank ufficiale post-checkpoint
+  if(!isDNF && !hasFinished){
+    const gpsPosNum  = gpsRank ? gpsRank.pos : null;
+    const rankOffNum = rankNum ? parseInt(rankNum) : null;
+
+    // Prendi il peggiore (più alto numericamente) tra GPS e ufficiale
+    // perché chi non ha GPS non viene contato dalla stima
+    let displayPos = null, isOfficial = false, isHybrid = false;
+
+    if(gpsPosNum !== null && rankOffNum !== null){
+      if(rankOffNum > gpsPosNum){
+        // Checkpoint dice che ci sono più persone davanti → usa ufficiale
+        displayPos = rankOffNum;
+        isOfficial = true;
+      } else {
+        // GPS è più pesante o uguale → stima GPS partendo dalla base checkpoint
+        displayPos = gpsPosNum;
+        isHybrid = true;
+      }
+    } else if(gpsPosNum !== null){
+      displayPos = gpsPosNum;
+    } else if(rankOffNum !== null){
+      displayPos = rankOffNum;
+      isOfficial = true;
+    }
+
+    if(displayPos !== null){
+      const tilde  = (!isOfficial) ? "~" : "";
+      const label  = isOfficial  ? "Posizione ufficiale"
+                   : isHybrid    ? "Posizione live (GPS+checkpoint)"
+                   :               "Posizione stimata GPS";
+      posHtml = `<div class="stat">
+        <div class="stat-label">${label}</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:22px;font-weight:900;color:${athlete.color}">${tilde}#${displayPos}</span>
+          <span style="font-size:12px;color:var(--muted)">/ ${total}</span>
+        </div>
+      </div>`;
+    }
+  } else if(hasFinished && rankNum){
     posHtml = `<div class="stat">
-      <div class="stat-label">Posizione ufficiale</div>
+      <div class="stat-label">Posizione finale</div>
       <div style="display:flex;align-items:baseline;gap:4px">
         <span style="font-size:22px;font-weight:900;color:${athlete.color}">#${rankNum}</span>
         <span style="font-size:12px;color:var(--muted)">/ ${total}</span>
-      </div>
-    </div>`;
-  } else if(gpsRank && !isDNF && !hasFinished){
-    // Stima GPS live
-    posHtml = `<div class="stat">
-      <div class="stat-label">Posizione stimata GPS</div>
-      <div style="display:flex;align-items:baseline;gap:4px">
-        <span style="font-size:22px;font-weight:900;color:${athlete.color}">~#${gpsRank.pos}</span>
-        <span style="font-size:12px;color:var(--muted)">/ ${gpsRank.total}</span>
       </div>
     </div>`;
   }
