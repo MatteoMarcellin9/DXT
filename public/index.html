@@ -520,31 +520,50 @@ function initChart(chartId, athlete, gpx, gpsIdx){
   const canvas = document.getElementById(chartId);
   if(!canvas || !gpx) return;
 
-  const totalDistM = gpx[gpx.length-1][3];
-  // Campiona per grafico: 150 punti
-  const step = Math.max(1, Math.floor(gpx.length/150));
-  const labels=[], eles=[];
-  for(let i=0;i<gpx.length;i+=step){
-    labels.push((gpx[i][3]/1000).toFixed(1));
-    eles.push(gpx[i][2]);
-  }
+  // Campiona il percorso: 200 punti uniformi
+  const step = Math.max(1, Math.floor(gpx.length/200));
+  const sampledPts = [];
+  for(let i=0;i<gpx.length;i+=step) sampledPts.push(gpx[i]);
+  if(sampledPts[sampledPts.length-1] !== gpx[gpx.length-1]) sampledPts.push(gpx[gpx.length-1]);
 
-  // Linea verticale posizione atleta
-  const posKm = gpsIdx!==null ? gpx[gpsIdx][3]/1000 : null;
+  // Dataset principale: {x: km, y: quota} — asse X numerico
+  const profileData = sampledPts.map(p => ({ x: p[3]/1000, y: p[2] }));
+  const totalKm = gpx[gpx.length-1][3]/1000;
+
+  // Posizione atleta: km e quota esatti dal punto GPX più vicino
+  const posKm  = gpsIdx !== null ? gpx[gpsIdx][3]/1000 : null;
+  const posEle = gpsIdx !== null ? gpx[gpsIdx][2]      : null;
+
+  // Dataset puntino atleta: singolo punto sovrapposto al profilo
+  const dotData = posKm !== null ? [{ x: posKm, y: posEle }] : [];
 
   const chart = new Chart(canvas, {
     type:'line',
     data:{
-      labels,
-      datasets:[{
-        data: eles,
-        borderColor: athlete.color,
-        borderWidth: 1.5,
-        fill: true,
-        backgroundColor: `${athlete.color}22`,
-        pointRadius: 0,
-        tension: 0.3,
-      }]
+      datasets:[
+        {
+          // Profilo altimetrico
+          data: profileData,
+          borderColor: athlete.color,
+          borderWidth: 1.5,
+          fill: true,
+          backgroundColor: `${athlete.color}1a`,
+          pointRadius: 0,
+          tension: 0.3,
+          order: 2,
+        },
+        {
+          // Puntino posizione atleta
+          data: dotData,
+          type: 'scatter',
+          pointRadius: 8,
+          pointHoverRadius: 10,
+          pointBackgroundColor: athlete.color,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2.5,
+          order: 1,
+        }
+      ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -552,32 +571,21 @@ function initChart(chartId, athlete, gpx, gpsIdx){
       plugins:{
         legend:{display:false},
         tooltip:{
+          filter: item => item.datasetIndex === 0,
           callbacks:{
-            title: ctx => `km ${ctx[0].label}`,
-            label: ctx => `${ctx.raw}m slm`
+            title: ctx => `km ${ctx[0].parsed.x.toFixed(1)}`,
+            label: ctx => `${Math.round(ctx.parsed.y)}m slm`
           }
         },
-        annotation: {
-          annotations: posKm !== null ? {
-            posLine:{
-              type:'line', scaleID:'x', value:posKm.toFixed(1),
-              borderColor:athlete.color, borderWidth:2, borderDash:[5,4],
-            },
-            posDot:{
-              type:'point',
-              xValue:posKm.toFixed(1),
-              yValue:gpx[gpsIdx][2],
-              backgroundColor:athlete.color,
-              borderColor:'#fff', borderWidth:2, radius:6,
-            }
-          } : {}
-        }
+        annotation: {},
       },
       scales:{
         x:{
-          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8},
+          type:'linear',
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8,callback:v=>v+'km'},
           grid:{color:'rgba(255,255,255,0.05)'},
-          title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}}
+          title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}},
+          min:0,
         },
         y:{
           ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:6,callback:v=>v+'m'},
