@@ -580,44 +580,25 @@ function initChart(chartId, athlete, gpx, gpsIdx){
   for(let i=0;i<gpx.length;i+=step) sampledPts.push(gpx[i]);
   if(sampledPts[sampledPts.length-1] !== gpx[gpx.length-1]) sampledPts.push(gpx[gpx.length-1]);
 
-  // Dataset principale: {x: km, y: quota} — asse X numerico
+  // Dataset unico: {x: km, y: quota}
   const profileData = sampledPts.map(p => ({ x: p[3]/1000, y: p[2] }));
-  const totalKm = gpx[gpx.length-1][3]/1000;
 
-  // Posizione atleta: km e quota esatti dal punto GPX più vicino
+  // Posizione atleta: km e quota esatti
   const posKm  = gpsIdx !== null ? gpx[gpsIdx][3]/1000 : null;
   const posEle = gpsIdx !== null ? gpx[gpsIdx][2]      : null;
-
-  // Dataset puntino atleta: singolo punto sovrapposto al profilo
-  const dotData = posKm !== null ? [{ x: posKm, y: posEle }] : [];
 
   const chart = new Chart(canvas, {
     type:'line',
     data:{
-      datasets:[
-        {
-          // Profilo altimetrico
-          data: profileData,
-          borderColor: athlete.color,
-          borderWidth: 1.5,
-          fill: true,
-          backgroundColor: `${athlete.color}1a`,
-          pointRadius: 0,
-          tension: 0.3,
-          order: 2,
-        },
-        {
-          // Puntino posizione atleta
-          data: dotData,
-          type: 'scatter',
-          pointRadius: 8,
-          pointHoverRadius: 10,
-          pointBackgroundColor: athlete.color,
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2.5,
-          order: 1,
-        }
-      ]
+      datasets:[{
+        data: profileData,
+        borderColor: athlete.color,
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: `${athlete.color}22`,
+        pointRadius: 0,
+        tension: 0.3,
+      }]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -625,13 +606,24 @@ function initChart(chartId, athlete, gpx, gpsIdx){
       plugins:{
         legend:{display:false},
         tooltip:{
-          filter: item => item.datasetIndex === 0,
           callbacks:{
             title: ctx => `km ${ctx[0].parsed.x.toFixed(1)}`,
             label: ctx => `${Math.round(ctx.parsed.y)}m slm`
           }
         },
-        annotation: {},
+        annotation:{
+          annotations: posKm !== null ? {
+            dot:{
+              type:'point',
+              xValue: posKm,
+              yValue: posEle,
+              backgroundColor: athlete.color,
+              borderColor:'#ffffff',
+              borderWidth: 2.5,
+              radius: 7,
+            }
+          } : {}
+        },
       },
       scales:{
         x:{
