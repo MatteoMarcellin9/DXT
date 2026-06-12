@@ -58,15 +58,25 @@ main{padding:20px;max-width:1000px;margin:0 auto;}
 .btn-sm{font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;padding:3px 8px;border:1px solid rgba(106,176,212,0.3);border-radius:4px;background:rgba(106,176,212,0.08);white-space:nowrap;cursor:pointer;}
 .btn-sm:hover{background:rgba(106,176,212,0.18);}
 
-/* MAP */
-.card-map-wrap{position:relative;}
-.card-map{height:260px;width:100%;background:#0d1a24;}
-.map-toggle-btn{position:absolute;top:8px;right:8px;z-index:500;background:rgba(8,13,18,0.85);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;}
+/* MAP TOGGLE */
+.card-map-toggle-btn{
+  width:100%; padding:9px 16px;
+  background:transparent; border:none; border-bottom:1px solid var(--border);
+  color:var(--muted); font-size:12px; font-family:'Inter',sans-serif;
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+  transition:background 0.15s; text-align:left;
+}
+.card-map-toggle-btn:hover{background:rgba(255,255,255,0.04); color:var(--text);}
+.card-map-toggle-btn .toggle-arrow{margin-left:auto; font-size:10px; transition:transform 0.2s;}
+.card-map-toggle-btn.open .toggle-arrow{transform:rotate(180deg);}
+.card-map-collapsible{display:none; border-bottom:1px solid var(--border);}
+.card-map-collapsible.open{display:block;}
+.card-map{height:280px; width:100%; background:#0d1a24;}
 
 /* ELEVATION */
-.card-elevation{padding:12px 16px;border-top:1px solid var(--border);}
-.elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-.elevation-chart-wrap{height:80px;position:relative;}
+.card-elevation{padding:14px 16px;}
+.elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.elevation-chart-wrap{height:200px;position:relative;}
 
 /* PROGRESS */
 .card-progress{padding:12px 16px;border-top:1px solid var(--border);}
@@ -417,12 +427,16 @@ function renderCard(athlete, row, splits, gps, gpx){
     </div>
     ${gpsRowHtml}
     ${timerHtml}
-    <div class="card-map-wrap">
+    <button class="card-map-toggle-btn" id="toggle-${athlete.bib}" onclick="toggleMap('${athlete.bib}')">
+      🗺️ Mappa + profilo altimetrico
+      <span class="toggle-arrow">▼</span>
+    </button>
+    <div class="card-map-collapsible" id="mapcoll-${athlete.bib}">
       <div id="${mapId}" class="card-map"></div>
-    </div>
-    <div class="card-elevation">
-      <div class="elevation-label">Profilo altimetrico — percorso + posizione attuale</div>
-      <div class="elevation-chart-wrap"><canvas id="${chartId}"></canvas></div>
+      <div class="card-elevation">
+        <div class="elevation-label">Profilo altimetrico · quota lungo il percorso</div>
+        <div class="elevation-chart-wrap"><canvas id="${chartId}"></canvas></div>
+      </div>
     </div>
     <div class="card-progress">
       <div class="progress-label"><span>Avanzamento</span><strong>${kmDone.toFixed(1)} / ${athlete.totalKm} km · ${pct}%</strong></div>
@@ -431,11 +445,7 @@ function renderCard(athlete, row, splits, gps, gpx){
     <div class="card-splits"><div class="splits-label">Checkpoint</div>${splitsHtml}</div>
     ${statsHtml}`;
 
-  // Inizializza mappa e profilo dopo render
-  requestAnimationFrame(() => {
-    initMap(mapId, athlete, gpx, gps, gpsIdx);
-    initChart(chartId, athlete, gpx, gpsIdx);
-  });
+  // Mappa e chart inizializzati lazy al primo click sul toggle
 }
 
 function initMap(mapId, athlete, gpx, gps, gpsIdx){
@@ -455,14 +465,21 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
   mapObjects[mapId] = map;
 
   // Tile layer topografico
+  // Base layer sbiadito
   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    maxZoom:17, opacity:0.85
+    maxZoom:17, opacity:0.28
+  }).addTo(map);
+  // Overlay scuro per far risaltare il tracciato
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom:19, opacity:0.55
   }).addTo(map);
 
   // Tracciato GPX
   if(gpx){
     const latlngs = gpx.map(p=>[p[0],p[1]]);
-    L.polyline(latlngs, {color:athlete.color, weight:3, opacity:0.85}).addTo(map);
+    L.polyline(latlngs, {color:athlete.color, weight:4.5, opacity:1.0}).addTo(map);
+    // Glow effect: linea più larga sotto
+    L.polyline(latlngs, {color:athlete.color, weight:10, opacity:0.18}).addTo(map);
 
     // Markers checkpoint (inizio/fine)
     const startPt = gpx[0], endPt = gpx[gpx.length-1];
@@ -551,9 +568,11 @@ function initChart(chartId, athlete, gpx, gpsIdx){
           title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}}
         },
         y:{
-          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:5},
-          grid:{color:'rgba(255,255,255,0.05)'},
-          title:{display:true,text:'m',color:'#7a8fa0',font:{size:9}}
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:6,callback:v=>v+'m'},
+          grid:{color:'rgba(255,255,255,0.07)'},
+          title:{display:true,text:'quota (m slm)',color:'#7a8fa0',font:{size:9}},
+          suggestedMin: Math.min(...eles)-50,
+          suggestedMax: Math.max(...eles)+50,
         }
       }
     }
@@ -596,6 +615,36 @@ function tickTimers(){
   });
 }
 setInterval(tickTimers, 1000);
+
+function toggleMap(bib){
+  const btn = document.getElementById('toggle-'+bib);
+  const coll = document.getElementById('mapcoll-'+bib);
+  if(!btn || !coll) return;
+  const isOpen = coll.classList.contains('open');
+  if(isOpen){
+    coll.classList.remove('open');
+    btn.classList.remove('open');
+  } else {
+    coll.classList.add('open');
+    btn.classList.add('open');
+    // Inizializza mappa solo al primo apertura (lazy)
+    const mapEl = document.getElementById('map-'+bib);
+    if(mapEl && !mapEl._leaflet_id){
+      const athlete = ATHLETES.find(a=>a.bib===bib);
+      if(athlete){
+        const gpx = gpxCache[athlete.gpxFile]||null;
+        const gpsData = gpsCache[athlete.geoEvent]?.[bib]||null;
+        const gpsIdx = (gpsData&&gpx) ? nearestGPXPoint(gpx,parseFloat(gpsData.lt),parseFloat(gpsData.lg)) : null;
+        initMap('map-'+bib, athlete, gpx, gpsData, gpsIdx);
+        initChart('chart-'+bib, athlete, gpx, gpsIdx);
+      }
+    }
+    // Forza resize leaflet
+    setTimeout(()=>{
+      if(mapObjects['map-'+bib]) mapObjects['map-'+bib].invalidateSize();
+    }, 50);
+  }
+}
 
 function toggleAuto(){
   autoRefresh=!autoRefresh;
