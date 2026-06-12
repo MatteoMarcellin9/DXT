@@ -269,6 +269,37 @@ function nearestGPXPoint(gpx, lat, lng){
   return best;
 }
 
+// Calcola posizione stimata GPS per un atleta rispetto agli altri della stessa gara
+// Restituisce {pos, total} dove total = iscritti totali alla gara
+function calcGPSRank(athlete, gpsByEvent, gpxByName){
+  const allGPS = gpsByEvent[athlete.geoEvent];
+  const gpx = gpxByName[athlete.gpxFile];
+  if(!allGPS || !gpx) return null;
+
+  // Km del nostro atleta
+  const myGPS = allGPS[athlete.bib];
+  if(!myGPS) return null;
+  const myIdx = nearestGPXPoint(gpx, parseFloat(myGPS.lt), parseFloat(myGPS.lg));
+  const myKm = gpx[myIdx][3];
+
+  // Filtra coordinate UK (sede GeoTracks = no fix GPS) - lat > 49 = UK
+  const validUK = p => parseFloat(p.lt) > 49;
+
+  // Calcola km di tutti gli atleti della stessa gara con GPS valido
+  let ahead = 0;
+  for(const bib of Object.keys(allGPS)){
+    const p = allGPS[bib];
+    if(validUK(p)) continue; // no fix GPS
+    const idx = nearestGPXPoint(gpx, parseFloat(p.lt), parseFloat(p.lg));
+    const km = gpx[idx][3];
+    if(km > myKm) ahead++;
+  }
+
+  const pos = ahead + 1;
+  const total = RACE_TOTALS[athlete.contest];
+  return { pos, total };
+}
+
 async function loadAthlete(athlete){
   const [mainRes, ...splitRes] = await Promise.allSettled([
     fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA", athlete.contest, athlete.bib),
@@ -315,7 +346,8 @@ async function refreshAll(){
     const a = ATHLETES[i];
     const gpsData = gpsByEvent[a.geoEvent]?.[a.bib] || null;
     const gpxData = gpxByName[a.gpxFile] || null;
-    renderCard(a, res.mainRow, res.splits, gpsData, gpxData);
+    const gpsRank = calcGPSRank(a, gpsByEvent, gpxByName);
+    renderCard(a, res.mainRow, res.splits, gpsData, gpxData, gpsRank);
   });
 
   const now = new Date().toLocaleTimeString("it-IT");
@@ -330,7 +362,7 @@ function formatElapsed(start){
   return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
-function renderCard(athlete, row, splits, gps, gpx){
+function renderCard(athlete, row, splits, gps, gpx, gpsRank){
   const container = document.getElementById("cardsContainer");
   const cardId = "card-"+athlete.bib;
   let card = document.getElementById(cardId);
@@ -414,12 +446,34 @@ function renderCard(athlete, row, splits, gps, gpx){
   const total = RACE_TOTALS[athlete.contest] || "?";
   const rankNum = rank && rank !== "n.a." && !String(rank).includes("DNF") ? rank : null;
 
-  const statsHtml = row?`<div class="card-stats">
-    ${rankNum ? `<div class="stat"><div class="stat-label">Posizione assoluta</div><div style="display:flex;align-items:baseline;gap:4px"><span style="font-size:22px;font-weight:900;color:${athlete.color}">#${rankNum}</span><span style="font-size:12px;color:var(--muted)">/ ${total}</span></div></div>` : ""}
+  // Posizione: ufficiale se disponibile, altrimenti stimata da GPS
+  let posHtml = "";
+  if(rankNum){
+    // Rank ufficiale post-checkpoint
+    posHtml = `<div class="stat">
+      <div class="stat-label">Posizione ufficiale</div>
+      <div style="display:flex;align-items:baseline;gap:4px">
+        <span style="font-size:22px;font-weight:900;color:${athlete.color}">#${rankNum}</span>
+        <span style="font-size:12px;color:var(--muted)">/ ${total}</span>
+      </div>
+    </div>`;
+  } else if(gpsRank && !isDNF && !hasFinished){
+    // Stima GPS live
+    posHtml = `<div class="stat">
+      <div class="stat-label">Posizione stimata GPS</div>
+      <div style="display:flex;align-items:baseline;gap:4px">
+        <span style="font-size:22px;font-weight:900;color:${athlete.color}">~#${gpsRank.pos}</span>
+        <span style="font-size:12px;color:var(--muted)">/ ${gpsRank.total}</span>
+      </div>
+    </div>`;
+  }
+
+  const statsHtml = `<div class="card-stats">
+    ${posHtml}
     ${hasFinished?`<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value hi">${finishTime}</div></div>`:""}
-    ${row[7]&&row[7]!=="n.a."&&row[7].trim()?`<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>`:""}
+    ${row&&row[7]&&row[7]!=="n.a."&&row[7].trim()?`<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>`:""}
     ${kmGPS!==null?`<div class="stat"><div class="stat-label">Km GPS</div><div class="stat-value">${kmGPS.toFixed(1)} km</div></div>`:""}
-  </div>`:"";
+  </div>`;
 
   const mapId = "map-"+athlete.bib;
   const chartId = "chart-"+athlete.bib;
