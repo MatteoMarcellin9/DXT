@@ -196,19 +196,43 @@ const RACE_TOTALS = { "1": 407, "2": 393, "3": 650 };
 const ATHLETES = [
   { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", geoId:"323839", gpxFile:"103k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,29,54,65,84,103], totalKm:103 },
+    splitKm:[0,29,54,65,84,103], totalKm:103,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.33006, lng:12.12644, ele:1597, km:28.85 },
+      { name:"Passo Staulanza", lat:46.42667, lng:12.08256, ele:1867, km:54.0  },
+      { name:"Zoppè",           lat:46.40083, lng:12.16480, ele:1829, km:64.96 },
+      { name:"Passo Cibiana",   lat:46.36444, lng:12.25765, ele:1737, km:84.41 },
+    ] },
   { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,24,49,60,74], totalKm:74 },
+    splitKm:[0,24,49,60,74], totalKm:74,
+    checkpointCoords:[
+      { name:"Fusine",        lat:46.32474, lng:12.13876, ele:1370, km:23.82 },
+      { name:"Zoppè",         lat:46.39283, lng:12.20941, ele:1581, km:49.41 },
+      { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
+    ] },
   { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
-    splitKm:[0,24,49,60,74], totalKm:74 },
+    splitKm:[0,24,49,60,74], totalKm:74,
+    checkpointCoords:[
+      { name:"Fusine",        lat:46.32474, lng:12.13876, ele:1370, km:23.82 },
+      { name:"Zoppè",         lat:46.39283, lng:12.20941, ele:1581, km:49.41 },
+      { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
+    ] },
   { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
-    splitKm:[0,11,26,55], totalKm:55 },
+    splitKm:[0,11,26,55], totalKm:55,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.32721, lng:12.09662, ele:1602, km:11.23 },
+      { name:"Passo Staulanza", lat:46.40827, lng:12.07611, ele:1826, km:25.83 },
+    ] },
   { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
-    splitKm:[0,11,26,55], totalKm:55 },
+    splitKm:[0,11,26,55], totalKm:55,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.32721, lng:12.09662, ele:1602, km:11.23 },
+      { name:"Passo Staulanza", lat:46.40827, lng:12.07611, ele:1826, km:25.83 },
+    ] },
 ];
 
 const INTER_LISTS = {
@@ -681,6 +705,21 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
     const startPt = gpx[0], endPt = gpx[gpx.length-1];
     L.circleMarker([startPt[0],startPt[1]],{radius:6,color:'#4caf7d',fillColor:'#4caf7d',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Partenza / Forno di Zoldo");
     L.circleMarker([endPt[0],endPt[1]],{radius:6,color:'#4caf7d',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Arrivo / Forno di Zoldo");
+
+    // Markers checkpoint intermedi
+    if(athlete.checkpointCoords){
+      athlete.checkpointCoords.forEach(cp => {
+        const cpIcon = L.divIcon({
+          html: `<div style="width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid ${athlete.color};box-shadow:0 0 4px rgba(0,0,0,0.5)"></div>`,
+          iconSize:[10,10], iconAnchor:[5,5], className:''
+        });
+        L.marker([cp.lat, cp.lng], {icon: cpIcon})
+          .addTo(map)
+          .bindPopup(`<div class="popup-bib" style="color:${athlete.color}">📍 ${cp.name}</div>
+            <div class="popup-row">km <strong>${cp.km}</strong></div>
+            <div class="popup-row">⛰️ <strong>${cp.ele}m</strong> slm</div>`);
+      });
+    }
   }
 
   // Puntino atleta
