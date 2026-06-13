@@ -137,6 +137,7 @@ export default async function handler(req, res) {
   uniqueRaces.forEach((r, i) => gpxByRace[r] = gpxResults[i]);
 
   const notifications = [];
+  const debugLog = [];
 
   for (const athlete of ATHLETES) {
     const gps = gpsByEvent[athlete.geoEvent]?.[athlete.bib];
@@ -147,6 +148,7 @@ export default async function handler(req, res) {
     if (!gpx) continue;
 
     const kmNow = nearestKm(gpx, parseFloat(gps.lt), parseFloat(gps.lg));
+    debugLog.push(`${athlete.bib}: km=${kmNow.toFixed(2)}`);
     const checkpoints = CHECKPOINTS[athlete.contest] || [];
 
     for (const cp of checkpoints) {
@@ -194,5 +196,6 @@ export default async function handler(req, res) {
     notifications: notifications.length,
     messages: notifications,
     notifiedTotal: notified.size,
+    debug: debugLog,
   });
 }
