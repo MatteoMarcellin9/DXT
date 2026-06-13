@@ -474,9 +474,16 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   let lastCpIdx = 0;
   athlete.splits.forEach((sp,i)=>{ if(splits[sp]) lastCpIdx=i; });
   if(hasFinished) lastCpIdx = athlete.splits.length-1;
-  const kmCheckpoint = athlete.splitKm[lastCpIdx]||0;
 
-  // Usa GPS se disponibile e > checkpoint
+  // Se il GPS dice che è oltre un checkpoint che il chip non ha registrato,
+  // aggiorna lastCpIdx usando i km GPS (chip non letto = errore timing)
+  if(kmGPS !== null){
+    athlete.splitKm.forEach((cpKm, i) => {
+      if(kmGPS >= cpKm && i > lastCpIdx) lastCpIdx = i;
+    });
+  }
+
+  const kmCheckpoint = athlete.splitKm[lastCpIdx]||0;
   const kmDone = (kmGPS !== null && kmGPS > kmCheckpoint) ? kmGPS : kmCheckpoint;
   const pct = Math.min(100, Math.round((kmDone/athlete.totalKm)*100));
 
@@ -656,11 +663,11 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
   // Tile layer topografico
   // Base layer sbiadito
   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    maxZoom:17, opacity:0.28
+    maxZoom:17, opacity:0.42
   }).addTo(map);
   // Overlay scuro per far risaltare il tracciato
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom:19, opacity:0.55
+    maxZoom:19, opacity:0.45
   }).addTo(map);
 
   // Tracciato GPX
