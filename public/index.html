@@ -982,8 +982,25 @@ function toggleAuto(){
   document.getElementById("autoToggle").className="toggle"+(autoRefresh?" on":"");
   document.getElementById("autoLabel").textContent=autoRefresh?"Auto ✓":"Auto";
   if(autoTimer) clearInterval(autoTimer);
-  if(autoRefresh) autoTimer=setInterval(refreshAll,30000);
+  if(autoRefresh) autoTimer=setInterval(autoTick, 5*60*1000); // 5 minuti
 }
+
+async function autoTick(){
+  await refreshAll();
+  // Chiama il bot per eventuali notifiche
+  try {
+    await fetch('/api/notify');
+  } catch(e){ console.log('notify error:', e); }
+}
+
+// Avvia auto-refresh in background subito all'apertura
+setTimeout(() => {
+  autoRefresh = true;
+  document.getElementById("autoToggle").className = "toggle on";
+  document.getElementById("autoLabel").textContent = "Auto ✓";
+  autoTimer = setInterval(autoTick, 5*60*1000);
+  refreshAll(); // carica subito i dati
+}, 500);
 </script>
 </body>
 </html>
