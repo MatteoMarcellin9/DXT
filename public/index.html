@@ -495,7 +495,10 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   if(gps && gpx){
     const idx = nearestGPXPoint(gpx, parseFloat(gps.lt), parseFloat(gps.lg));
     gpsIdx = idx;
-    kmGPS = gpx[idx][3]/1000;
+    // Calcola km come: totalKm - km_rimanenti_alla_fine_del_GPX
+    // Così percorsi che condividono il finale danno valori coerenti
+    const kmRimanentiGPX = (gpx[gpx.length-1][3] - gpx[idx][3]) / 1000;
+    kmGPS = athlete.totalKm - kmRimanentiGPX;
   }
 
   // Km da checkpoint
@@ -1551,7 +1554,10 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   if(gps && gpx){
     const idx = nearestGPXPoint(gpx, parseFloat(gps.lt), parseFloat(gps.lg));
     gpsIdx = idx;
-    kmGPS = gpx[idx][3]/1000;
+    // Calcola km come: totalKm - km_rimanenti_alla_fine_del_GPX
+    // Così percorsi che condividono il finale danno valori coerenti
+    const kmRimanentiGPX = (gpx[gpx.length-1][3] - gpx[idx][3]) / 1000;
+    kmGPS = athlete.totalKm - kmRimanentiGPX;
   }
 
   // Km da checkpoint
