@@ -129,6 +129,8 @@ main{padding:20px;max-width:1000px;margin:0 auto;}
 .leaflet-popup-content-wrapper{background:rgba(18,26,34,0.95);border:1px solid rgba(255,255,255,0.15);color:var(--text);border-radius:8px;}
 .leaflet-popup-tip{background:rgba(18,26,34,0.95);}
 .leaflet-popup-content{margin:10px 14px;font-family:'Inter',sans-serif;font-size:13px;}
+.cp-tooltip{background:rgba(18,26,34,0.92)!important;border:1px solid rgba(255,255,255,0.2)!important;color:#e8eff6!important;font-family:'Inter',sans-serif!important;font-size:11px!important;font-weight:600!important;padding:3px 8px!important;border-radius:4px!important;box-shadow:0 2px 8px rgba(0,0,0,0.5)!important;}
+.cp-tooltip::before{display:none!important;}
 .popup-bib{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;}
 .popup-row{font-size:12px;color:var(--muted);margin-top:3px;}
 .popup-row strong{color:var(--text);}
@@ -698,8 +700,49 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
   if(gpx){
     const latlngs = gpx.map(p=>[p[0],p[1]]);
     L.polyline(latlngs, {color:athlete.color, weight:4.5, opacity:1.0}).addTo(map);
-    // Glow effect: linea più larga sotto
     L.polyline(latlngs, {color:athlete.color, weight:10, opacity:0.18}).addTo(map);
+
+    // Hover sulla mappa: puntino mobile sul tracciato + sync grafico
+    const hoverDot = L.circleMarker([latlngs[0][0],latlngs[0][1]], {
+      radius:6, color:'#fff', fillColor:athlete.color, fillOpacity:0, opacity:0, weight:2
+    }).addTo(map);
+
+    map.on('mousemove', function(e){
+      let bestI=0, bestD=Infinity;
+      for(let i=0;i<gpx.length;i++){
+        const d=map.distance(e.latlng, L.latLng(gpx[i][0],gpx[i][1]));
+        if(d<bestD){bestD=d;bestI=i;}
+      }
+      if(bestD>400){
+        hoverDot.setStyle({opacity:0,fillOpacity:0});
+        hoverDot.unbindTooltip();
+        const ch=chartObjects['chart-'+athlete.bib];
+        if(ch){ch._hoverIdx=null;ch.update('none');}
+        return;
+      }
+      const pt=gpx[bestI];
+      hoverDot.setLatLng([pt[0],pt[1]]);
+      hoverDot.setStyle({opacity:1,fillOpacity:0.95});
+      hoverDot.bindTooltip(
+        `${(pt[3]/1000).toFixed(1)} km · ${Math.round(pt[2])}m`,
+        {permanent:true,direction:'top',offset:[0,-10],className:'cp-tooltip'}
+      ).openTooltip();
+      // Sync chart: trova indice nel campionamento
+      const ch=chartObjects['chart-'+athlete.bib];
+      if(ch){
+        const km=pt[3]/1000;
+        let ci=0,cd=Infinity;
+        ch._sampledKm.forEach((sk,i)=>{const diff=Math.abs(sk-km);if(diff<cd){cd=diff;ci=i;}});
+        ch._hoverIdx=ci;
+        ch.update('none');
+      }
+    });
+    map.on('mouseout',function(){
+      hoverDot.setStyle({opacity:0,fillOpacity:0});
+      hoverDot.unbindTooltip();
+      const ch=chartObjects['chart-'+athlete.bib];
+      if(ch){ch._hoverIdx=null;ch.update('none');}
+    });
 
     // Markers checkpoint (inizio/fine)
     const startPt = gpx[0], endPt = gpx[gpx.length-1];
@@ -715,6 +758,7 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
         });
         L.marker([cp.lat, cp.lng], {icon: cpIcon})
           .addTo(map)
+          .bindTooltip(cp.name, {permanent:false, direction:'top', offset:[0,-8], className:'cp-tooltip'})
           .bindPopup(`<div class="popup-bib" style="color:${athlete.color}">📍 ${cp.name}</div>
             <div class="popup-row">km <strong>${cp.km}</strong></div>
             <div class="popup-row">⛰️ <strong>${cp.ele}m</strong> slm</div>`);
@@ -780,8 +824,43 @@ function initChart(chartId, athlete, gpx, gpsIdx){
   const minEle = Math.min(...eles);
   const maxEle = Math.max(...eles);
 
+  // Plugin: puntino hover + linee checkpoint
+  const elevPlugin = {
+    id:'elevHover',
+    afterDraw(ch){
+      const ctx=ch.ctx;
+      const xSc=ch.scales.x, ySc=ch.scales.y;
+      const meta=ch.getDatasetMeta(0);
+      // Linee checkpoint
+      if(ch._cpLines){
+        ch._cpLines.forEach(cp=>{
+          const xi=ch._sampledKm ? ch._sampledKm.reduce((bi,sk,i)=>Math.abs(sk-cp.km)<Math.abs(ch._sampledKm[bi]-cp.km)?i:bi,0) : -1;
+          if(xi<0) return;
+          const xPx=meta.data[xi]?.x;
+          if(!xPx) return;
+          ctx.save();
+          ctx.beginPath();ctx.moveTo(xPx,ySc.top);ctx.lineTo(xPx,ySc.bottom);
+          ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();
+          ctx.fillStyle='rgba(255,255,255,0.45)';ctx.font='9px Inter,sans-serif';ctx.textAlign='center';
+          const label=cp.name.replace('Passo ','');
+          ctx.fillText(label, xPx, ySc.top+9);
+          ctx.restore();
+        });
+      }
+      // Puntino hover
+      if(ch._hoverIdx==null) return;
+      const pt=meta.data[ch._hoverIdx];
+      if(!pt) return;
+      ctx.save();
+      ctx.beginPath();ctx.arc(pt.x,pt.y,6,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
+      ctx.beginPath();ctx.arc(pt.x,pt.y,4,0,2*Math.PI);ctx.fillStyle=athlete.color;ctx.fill();
+      ctx.restore();
+    }
+  };
+
   const chart = new Chart(canvas, {
     type:'line',
+    plugins:[elevPlugin],
     data:{
       labels,
       datasets:[{
@@ -825,6 +904,9 @@ function initChart(chartId, athlete, gpx, gpsIdx){
       }
     }
   });
+  chart._sampledKm = sampledPts.map(p=>p[3]/1000);
+  chart._cpLines = athlete.checkpointCoords || [];
+  chart._hoverIdx = null;
   chartObjects[chartId] = chart;
 }
 
