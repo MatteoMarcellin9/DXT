@@ -205,7 +205,7 @@ const ATHLETES = [
       { name:"Zoppè",           lat:46.40083, lng:12.16480, ele:1829, km:64.96 },
       { name:"Passo Cibiana",   lat:46.36444, lng:12.25765, ele:1737, km:84.41 },
     ] },
-  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:"324198", gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,33,44,60,74], totalKm:74,
     checkpointCoords:[
@@ -213,7 +213,7 @@ const ATHLETES = [
       { name:"Zoppè",         lat:46.38604, lng:12.17450, ele:1452, km:44.39 },
       { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
     ] },
-  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:null, gpxFile:"72k",
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:"324242", gpxFile:"72k",
     splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
     splitKm:[0,33,44,60,74], totalKm:74,
     checkpointCoords:[
@@ -221,14 +221,14 @@ const ATHLETES = [
       { name:"Zoppè",         lat:46.38604, lng:12.17450, ele:1452, km:44.39 },
       { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
     ] },
-  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:"324855", gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,26,55], totalKm:55,
     checkpointCoords:[
       { name:"Passo Duran",     lat:46.32721, lng:12.09662, ele:1602, km:11.23 },
       { name:"Passo Staulanza", lat:46.40827, lng:12.07611, ele:1826, km:25.83 },
     ] },
-  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:null, gpxFile:"55k",
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:"324856", gpxFile:"55k",
     splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
     splitKm:[0,11,26,55], totalKm:55,
     checkpointCoords:[
@@ -566,7 +566,8 @@ function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
   // Posizione: da GeoTracks (detail.position) se disponibile,
   // poi rank ufficiale raceresult, poi niente
   let posHtml = "";
-  const geoPos = detail && detail.position ? parseInt(detail.position) : null;
+  const geoPosRaw = detail && detail.position ? parseInt(detail.position) : null;
+  const geoPos = (geoPosRaw && geoPosRaw > 0) ? geoPosRaw : null;
   const rankOffNum = rankNum ? parseInt(rankNum) : null;
 
   if(hasFinished && rankNum){
@@ -713,7 +714,1061 @@ function initMap(mapId, athlete, gpx, gps, gpsIdx){
         const d=map.distance(e.latlng, L.latLng(gpx[i][0],gpx[i][1]));
         if(d<bestD){bestD=d;bestI=i;}
       }
-      if(bestD>400){
+      if(bestD>600){
+        hoverDot.setStyle({opacity:0,fillOpacity:0});
+        hoverDot.unbindTooltip();
+        const ch=chartObjects['chart-'+athlete.bib];
+        if(ch){ch._hoverIdx=null;ch.update('none');}
+        return;
+      }
+      const pt=gpx[bestI];
+      hoverDot.setLatLng([pt[0],pt[1]]);
+      hoverDot.setStyle({opacity:1,fillOpacity:0.95});
+      hoverDot.bindTooltip(
+        `${(pt[3]/1000).toFixed(1)} km · ${Math.round(pt[2])}m`,
+        {permanent:true,direction:'top',offset:[0,-10],className:'cp-tooltip'}
+      ).openTooltip();
+      // Sync chart: trova indice nel campionamento
+      const ch=chartObjects['chart-'+athlete.bib];
+      if(ch){
+        const km=pt[3]/1000;
+        let ci=0,cd=Infinity;
+        ch._sampledKm.forEach((sk,i)=>{const diff=Math.abs(sk-km);if(diff<cd){cd=diff;ci=i;}});
+        ch._hoverIdx=ci;
+        ch.update('none');
+      }
+    });
+    map.on('mouseout',function(){
+      hoverDot.setStyle({opacity:0,fillOpacity:0});
+      hoverDot.unbindTooltip();
+      const ch=chartObjects['chart-'+athlete.bib];
+      if(ch){ch._hoverIdx=null;ch.update('none');}
+    });
+
+    // Markers checkpoint (inizio/fine)
+    const startPt = gpx[0], endPt = gpx[gpx.length-1];
+    L.circleMarker([startPt[0],startPt[1]],{radius:6,color:'#4caf7d',fillColor:'#4caf7d',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Partenza / Forno di Zoldo");
+    L.circleMarker([endPt[0],endPt[1]],{radius:6,color:'#4caf7d',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(map).bindPopup("🏁 Arrivo / Forno di Zoldo");
+
+    // Markers checkpoint intermedi
+    if(athlete.checkpointCoords){
+      athlete.checkpointCoords.forEach(cp => {
+        const cpIcon = L.divIcon({
+          html: `<div style="width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid ${athlete.color};box-shadow:0 0 4px rgba(0,0,0,0.5)"></div>`,
+          iconSize:[10,10], iconAnchor:[5,5], className:''
+        });
+        L.marker([cp.lat, cp.lng], {icon: cpIcon})
+          .addTo(map)
+          .bindTooltip(cp.name, {permanent:false, direction:'top', offset:[0,-8], className:'cp-tooltip'})
+          .bindPopup(`<div class="popup-bib" style="color:${athlete.color}">📍 ${cp.name}</div>
+            <div class="popup-row">km <strong>${cp.km}</strong></div>
+            <div class="popup-row">⛰️ <strong>${cp.ele}m</strong> slm</div>`);
+      });
+    }
+  }
+
+  // Puntino atleta
+  if(gps){
+    const lat=parseFloat(gps.lt), lng=parseFloat(gps.lg);
+    const isMoving = gps.s===1;
+    const ele = (gpx&&gpsIdx!==null) ? Math.round(gpx[gpsIdx][2])+"m slm" : "";
+    const kmStr = (gpx&&gpsIdx!==null) ? (gpx[gpsIdx][3]/1000).toFixed(1)+" km" : "";
+
+    const icon = L.divIcon({
+      html: `<div style="width:16px;height:16px;border-radius:50%;background:${athlete.color};border:3px solid #fff;box-shadow:0 0 8px ${athlete.color};${isMoving?'animation:pdot 1s infinite':''}"></div>`,
+      iconSize:[16,16], iconAnchor:[8,8], className:''
+    });
+
+    const popup = `<div class="popup-bib" style="color:${athlete.color}">#${athlete.bib}</div>
+      <div class="popup-row"><strong>${athlete.name.split(' ')[0]}</strong> · ${athlete.raceLabel}</div>
+      ${kmStr?`<div class="popup-row">📍 <strong>${kmStr}</strong> percorsi</div>`:''}
+      ${ele?`<div class="popup-row">⛰️ Quota <strong>${ele}</strong></div>`:''}
+      <div class="popup-row">${isMoving?"🟢 In movimento":"⚪ Fermo"}</div>`;
+
+    L.marker([lat,lng],{icon}).addTo(map).bindPopup(popup);
+  }
+}
+
+function initChart(chartId, athlete, gpx, gpsIdx){
+  if(chartObjects[chartId]){ chartObjects[chartId].destroy(); delete chartObjects[chartId]; }
+  const canvas = document.getElementById(chartId);
+  if(!canvas || !gpx) return;
+
+  // Campiona il percorso: 200 punti uniformi
+  const step = Math.max(1, Math.floor(gpx.length/200));
+  const sampledPts = [];
+  for(let i=0;i<gpx.length;i+=step) sampledPts.push(gpx[i]);
+  if(sampledPts[sampledPts.length-1] !== gpx[gpx.length-1])
+    sampledPts.push(gpx[gpx.length-1]);
+
+  // Labels = km come stringa, values = quota
+  const labels = sampledPts.map(p => (p[3]/1000).toFixed(1));
+  const eles   = sampledPts.map(p => p[2]);
+
+  // Trova l'indice nel campionamento più vicino alla posizione GPS
+  // confrontando i km del punto GPX originale con i km dei campioni
+  let dotIndex = null;
+  if(gpsIdx !== null){
+    const posKmReal = gpx[gpsIdx][3]/1000;
+    let bestDiff = Infinity;
+    sampledPts.forEach((p, i) => {
+      const diff = Math.abs(p[3]/1000 - posKmReal);
+      if(diff < bestDiff){ bestDiff=diff; dotIndex=i; }
+    });
+  }
+
+  // pointRadius array: 0 ovunque, grande solo sul punto posizione
+  const radii = eles.map((_, i) => i === dotIndex ? 8 : 0);
+  const bColors = eles.map((_, i) => i === dotIndex ? athlete.color : 'transparent');
+  const bWidth  = eles.map((_, i) => i === dotIndex ? 2.5 : 0);
+
+  const minEle = Math.min(...eles);
+  const maxEle = Math.max(...eles);
+
+  // Plugin: puntino hover + linee checkpoint
+  const elevPlugin = {
+    id:'elevHover',
+    afterDraw(ch){
+      const ctx=ch.ctx;
+      const xSc=ch.scales.x, ySc=ch.scales.y;
+      const meta=ch.getDatasetMeta(0);
+      // Linee checkpoint
+      if(ch._cpLines){
+        ch._cpLines.forEach(cp=>{
+          const xi=ch._sampledKm ? ch._sampledKm.reduce((bi,sk,i)=>Math.abs(sk-cp.km)<Math.abs(ch._sampledKm[bi]-cp.km)?i:bi,0) : -1;
+          if(xi<0) return;
+          const xPx=meta.data[xi]?.x;
+          if(!xPx) return;
+          ctx.save();
+          ctx.beginPath();ctx.moveTo(xPx,ySc.top);ctx.lineTo(xPx,ySc.bottom);
+          ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();
+          ctx.fillStyle='rgba(255,255,255,0.45)';ctx.font='9px Inter,sans-serif';ctx.textAlign='center';
+          const label=cp.name.replace('Passo ','');
+          ctx.fillText(label, xPx, ySc.top+9);
+          ctx.restore();
+        });
+      }
+      // Puntino hover
+      if(ch._hoverIdx==null) return;
+      const pt=meta.data[ch._hoverIdx];
+      if(!pt) return;
+      ctx.save();
+      ctx.beginPath();ctx.arc(pt.x,pt.y,6,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
+      ctx.beginPath();ctx.arc(pt.x,pt.y,4,0,2*Math.PI);ctx.fillStyle=athlete.color;ctx.fill();
+      ctx.restore();
+    }
+  };
+
+  const chart = new Chart(canvas, {
+    type:'line',
+    plugins:[elevPlugin],
+    data:{
+      labels,
+      datasets:[{
+        data: eles,
+        borderColor: athlete.color,
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: `${athlete.color}22`,
+        pointRadius: radii,
+        pointBackgroundColor: bColors,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: bWidth,
+        tension: 0.3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title: ctx => `km ${ctx[0].label}`,
+            label: ctx => `${Math.round(ctx.raw)}m slm`
+          }
+        },
+      },
+      scales:{
+        x:{
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:8},
+          grid:{color:'rgba(255,255,255,0.05)'},
+          title:{display:true,text:'km',color:'#7a8fa0',font:{size:9}},
+        },
+        y:{
+          ticks:{color:'#7a8fa0',font:{size:9},maxTicksLimit:6,callback:v=>v+'m'},
+          grid:{color:'rgba(255,255,255,0.07)'},
+          title:{display:true,text:'quota (m slm)',color:'#7a8fa0',font:{size:9}},
+          suggestedMin: minEle - 50,
+          suggestedMax: maxEle + 50,
+        }
+      }
+    }
+  });
+  chart._sampledKm = sampledPts.map(p=>p[3]/1000);
+  chart._cpLines = athlete.checkpointCoords || [];
+  chart._hoverIdx = null;
+  chartObjects[chartId] = chart;
+}
+
+
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+// Tick ogni secondo per aggiornare i timer
+function tickTimers(){
+  document.querySelectorAll('.card-timer').forEach(el => {
+    const card = el.closest('.athlete-card');
+    if(!card) return;
+    const bib = card.id.replace('card-','');
+    const athlete = ATHLETES.find(a => a.bib === bib);
+    if(!athlete) return;
+    const finishEl = card.querySelector('.status-done');
+    const dnfEl = card.querySelector('.status-dnf');
+    const finishTime = finishEl ? null : null; // già gestito
+    const isDNF = !!dnfEl;
+    const hasFinished = !!finishEl;
+    // Ricostruisci solo il valore del timer
+    const timerVal = el.querySelector('.timer-value');
+    if(!timerVal) return;
+    const start = RACE_START[athlete.contest];
+    const now = new Date();
+    if(isDNF){ timerVal.textContent='Ritirato'; timerVal.className='timer-value'; return; }
+    if(hasFinished){ return; } // non toccare, mostra tempo finale
+    if(now < start){
+      const diff = start-now;
+      const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000);
+      timerVal.textContent=`Partenza tra ${h}h ${String(m).padStart(2,'0')}m`;
+      timerVal.className='timer-value';
+    } else {
+      const elapsed=now-start;
+      const h=Math.floor(elapsed/3600000), m=Math.floor((elapsed%3600000)/60000), s=Math.floor((elapsed%60000)/1000);
+      timerVal.textContent=`${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      timerVal.className='timer-value running';
+    }
+  });
+}
+setInterval(tickTimers, 1000);
+
+function toggleMap(bib){
+  const btn = document.getElementById('toggle-'+bib);
+  const coll = document.getElementById('mapcoll-'+bib);
+  if(!btn || !coll) return;
+  const isOpen = coll.classList.contains('open');
+  if(isOpen){
+    coll.classList.remove('open');
+    btn.classList.remove('open');
+  } else {
+    coll.classList.add('open');
+    btn.classList.add('open');
+    // Inizializza mappa solo al primo apertura (lazy)
+    const mapEl = document.getElementById('map-'+bib);
+    if(mapEl && !mapEl._leaflet_id){
+      const athlete = ATHLETES.find(a=>a.bib===bib);
+      if(athlete){
+        const gpx = gpxCache[athlete.gpxFile]||null;
+        const gpsData = gpsCache[athlete.geoEvent]?.[bib]||null;
+        const gpsIdx = (gpsData&&gpx) ? nearestGPXPoint(gpx,parseFloat(gpsData.lt),parseFloat(gpsData.lg)) : null;
+        initMap('map-'+bib, athlete, gpx, gpsData, gpsIdx);
+        initChart('chart-'+bib, athlete, gpx, gpsIdx);
+      }
+    }
+    // Forza resize leaflet
+    setTimeout(()=>{
+      if(mapObjects['map-'+bib]) mapObjects['map-'+bib].invalidateSize();
+    }, 50);
+  }
+}
+
+function toggleAuto(){
+  autoRefresh=!autoRefresh;
+  document.getElementById("autoToggle").className="toggle"+(autoRefresh?" on":"");
+  document.getElementById("autoLabel").textContent=autoRefresh?"Auto ✓":"Auto";
+  if(autoTimer) clearInterval(autoTimer);
+  if(autoRefresh) autoTimer=setInterval(autoTick, 5*60*1000); // 5 minuti
+}
+
+async function autoTick(){
+  await refreshAll();
+  // Chiama il bot per eventuali notifiche
+  try {
+    await fetch('/api/notify');
+  } catch(e){ console.log('notify error:', e); }
+}
+
+// Avvia auto-refresh in background subito all'apertura
+setTimeout(() => {
+  autoRefresh = true;
+  document.getElementById("autoToggle").className = "toggle on";
+  document.getElementById("autoLabel").textContent = "Auto ✓";
+  autoTimer = setInterval(autoTick, 5*60*1000);
+  refreshAll(); // carica subito i dati
+}, 500);
+</script>
+</body>
+</html>  // Plugin custom: puntino hover + linee checkpoint
+  const elevPlugin = {
+    id: 'elevHover',
+    afterDraw(ch){
+      const ctx = ch.ctx;
+      const meta = ch.getDatasetMeta(0);
+      if(!meta || !meta.data || !meta.data.length) return;
+      const ySc = ch.scales.y;
+      if(!ySc) return;
+
+      // Linee verticali checkpoint
+      if(ch._cpLines && ch._sampledKm && ch._sampledKm.length){
+        ch._cpLines.forEach(cp => {
+          let xi = 0, minDiff = Infinity;
+          ch._sampledKm.forEach((sk, i) => {
+            const diff = Math.abs(sk - cp.km);
+            if(diff < minDiff){ minDiff = diff; xi = i; }
+          });
+          const pt = meta.data[xi];
+          if(!pt) return;
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(pt.x, ySc.top);
+          ctx.lineTo(pt.x, ySc.bottom);
+          ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3,3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.font = 'bold 9px Inter,sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(cp.name.replace('Passo ',''), pt.x, ySc.top + 9);
+          ctx.restore();
+        });
+      }
+
+      // Puntino hover
+      if(ch._hoverIdx == null) return;
+      const hpt = meta.data[ch._hoverIdx];
+      if(!hpt) return;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(hpt.x, hpt.y, 7, 0, 2*Math.PI);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.beginPath(); ctx.arc(hpt.x, hpt.y, 5, 0, 2*Math.PI);
+      ctx.fillStyle = athlete.color; ctx.fill();
+      ctx.restore();
+    }
+  };OCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DXT 2026 · Tracker Amici</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+// Registra il plugin annotation esplicitamente
+if(window.Chart && window.ChartAnnotation){
+  Chart.register(window.ChartAnnotation);
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{--bg:#0a0f14;--surface:rgba(18,26,34,0.85);--border:rgba(255,255,255,0.09);--text:#e8eff6;--muted:#7a8fa0;--accent:#e8873a;--green:#4caf7d;--blue:#6ab0d4;--red:#e05a4e;--rock:#8fa3b0;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;position:relative;}
+body::before{content:'';position:fixed;inset:0;background-image:url('/civetta.jpg');background-size:cover;background-position:center 30%;background-attachment:fixed;filter:brightness(0.18) saturate(0.5) sepia(0.3);z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:linear-gradient(to bottom,rgba(10,15,20,0.55) 0%,rgba(10,15,20,0.2) 40%,rgba(10,15,20,0.6) 100%);z-index:0;}
+header,main{position:relative;z-index:1;}
+header{border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;background:rgba(8,13,18,0.92);backdrop-filter:blur(12px);z-index:100;}
+.logo{font-weight:900;font-size:20px;letter-spacing:-0.5px;color:var(--accent);}
+.logo span{color:var(--text);}
+.logo-sub{font-size:10px;color:var(--rock);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+.header-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.refresh-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;display:flex;align-items:center;gap:6px;}
+.refresh-btn:hover{opacity:0.85;}.refresh-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.toggle-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.toggle{width:32px;height:18px;background:rgba(255,255,255,0.12);border-radius:9px;position:relative;cursor:pointer;border:none;transition:background 0.2s;}
+.toggle.on{background:var(--accent);}
+.toggle::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left 0.2s;}
+.toggle.on::after{left:17px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pdot 2s infinite;}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:0.4}}
+main{padding:20px;max-width:1000px;margin:0 auto;}
+.cards-grid{display:grid;gap:16px;}
+
+/* CARD */
+.athlete-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(0,0,0,0.4);transition:border-color 0.3s;}
+.athlete-card.finished{border-color:rgba(76,175,125,0.5);}
+.athlete-card.dnf{border-color:rgba(224,90,78,0.4);opacity:0.7;}
+.card-header{padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.card-bib{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:22px;min-width:50px;}
+.card-name{font-weight:700;font-size:15px;flex:1;}
+.card-club{font-size:11px;color:var(--muted);margin-top:2px;}
+.race-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.card-status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;white-space:nowrap;}
+.status-running{background:rgba(232,135,58,0.18);color:var(--accent);}
+.status-done{background:rgba(76,175,125,0.18);color:var(--green);}
+.status-dnf{background:rgba(224,90,78,0.18);color:var(--red);}
+.status-wait{background:rgba(122,143,160,0.18);color:var(--muted);}
+
+/* GPS row */
+.card-gps-row{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px;}
+.gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.gps-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);animation:pdot 2s infinite;}
+.gps-text{flex:1;color:var(--muted);}
+.gps-text strong{color:var(--text);}
+.gps-coords{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--rock);}
+.btn-sm{font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;padding:3px 8px;border:1px solid rgba(106,176,212,0.3);border-radius:4px;background:rgba(106,176,212,0.08);white-space:nowrap;cursor:pointer;}
+.btn-sm:hover{background:rgba(106,176,212,0.18);}
+
+/* MAP TOGGLE */
+.card-map-toggle-btn{
+  width:100%; padding:9px 16px;
+  background:transparent; border:none; border-bottom:1px solid var(--border);
+  color:var(--muted); font-size:12px; font-family:'Inter',sans-serif;
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+  transition:background 0.15s; text-align:left;
+}
+.card-map-toggle-btn:hover{background:rgba(255,255,255,0.04); color:var(--text);}
+.card-map-toggle-btn .toggle-arrow{margin-left:auto; font-size:10px; transition:transform 0.2s;}
+.card-map-toggle-btn.open .toggle-arrow{transform:rotate(180deg);}
+.card-map-collapsible{display:none; border-bottom:1px solid var(--border);}
+.card-map-collapsible.open{display:block;}
+.card-map{height:280px; width:100%; background:#0d1a24;}
+
+/* ELEVATION */
+.card-elevation{padding:14px 16px;}
+.elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.elevation-chart-wrap{height:200px;position:relative;}
+
+/* PROGRESS */
+.card-progress{padding:12px 16px;border-top:1px solid var(--border);}
+.progress-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:flex;justify-content:space-between;}
+.progress-label strong{color:var(--text);font-weight:600;}
+.progress-bar-wrap{background:rgba(255,255,255,0.08);border-radius:4px;height:5px;overflow:hidden;}
+.progress-bar{height:5px;border-radius:4px;background:var(--accent);transition:width 0.6s ease;}
+.progress-bar.done{background:var(--green);}
+
+/* SPLITS */
+.card-splits{padding:12px 16px 14px;}
+.splits-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.splits-timeline{display:flex;align-items:flex-start;overflow-x:auto;padding-bottom:4px;}
+.split-item{display:flex;flex-direction:column;align-items:center;flex:1;min-width:64px;position:relative;}
+.split-item:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:2px;background:rgba(255,255,255,0.08);z-index:0;}
+.split-item.done:not(:last-child)::after{background:var(--accent);opacity:0.6;}
+.split-dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);background:rgba(10,15,20,0.6);z-index:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-bottom:6px;}
+.split-dot.done{border-color:var(--accent);background:var(--accent);color:#fff;}
+.split-dot.finish.done{border-color:var(--green);background:var(--green);}
+.split-dot.current{border-color:var(--accent);background:rgba(10,15,20,0.8);color:var(--accent);animation:pdot 1.5s infinite;}
+.split-label{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;}
+.split-time{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-align:center;margin-top:2px;}
+.split-item.done .split-label{color:var(--text);}
+.card-stats{padding:0 16px 14px;display:flex;gap:20px;flex-wrap:wrap;}
+.stat{display:flex;flex-direction:column;gap:2px;}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;}
+.stat-value.hi{color:var(--accent);}
+.last-update{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;padding-bottom:40px;font-family:'JetBrains Mono',monospace;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* TIMER */
+.card-timer{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);}
+.timer-icon{font-size:14px;}
+.timer-text{flex:1;font-size:12px;color:var(--muted);}
+.timer-value{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--text);}
+.timer-value.running{color:var(--accent);}
+.timer-value.finished{color:var(--green);}
+
+.spinning{display:inline-block;animation:spin 0.8s linear infinite;}
+
+/* Leaflet dark overrides */
+.leaflet-container{background:#0d1a24;}
+.leaflet-popup-content-wrapper{background:rgba(18,26,34,0.95);border:1px solid rgba(255,255,255,0.15);color:var(--text);border-radius:8px;}
+.leaflet-popup-tip{background:rgba(18,26,34,0.95);}
+.leaflet-popup-content{margin:10px 14px;font-family:'Inter',sans-serif;font-size:13px;}
+.cp-tooltip{background:rgba(18,26,34,0.92)!important;border:1px solid rgba(255,255,255,0.2)!important;color:#e8eff6!important;font-family:'Inter',sans-serif!important;font-size:11px!important;font-weight:600!important;padding:3px 8px!important;border-radius:4px!important;box-shadow:0 2px 8px rgba(0,0,0,0.5)!important;}
+.cp-tooltip::before{display:none!important;}
+.popup-bib{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;}
+.popup-row{font-size:12px;color:var(--muted);margin-top:3px;}
+.popup-row strong{color:var(--text);}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">DXT<span> '26</span></div>
+    <div class="logo-sub">Val di Zoldo · Dolomiti</div>
+  </div>
+  <div class="header-actions">
+    <div class="toggle-wrap">
+      <button class="toggle" id="autoToggle" onclick="toggleAuto()"></button>
+      <span id="autoLabel">Auto</span>
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
+      <span id="refreshIcon">↻</span> Aggiorna
+    </button>
+  </div>
+</header>
+<main>
+  <div class="cards-grid" id="cardsContainer">
+    <div style="text-align:center;padding:80px 20px;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px">⛰️</div>
+      <div style="font-size:17px;color:var(--text);font-weight:600;margin-bottom:8px">DXT 2026 · Tracker</div>
+      <div style="color:var(--rock)">Premi Aggiorna per caricare posizioni e dati live</div>
+    </div>
+  </div>
+  <div class="last-update" id="lastUpdate"></div>
+</main>
+<script>
+
+// Orari partenza ufficiali (UTC+2 = ora italiana)
+const RACE_START = {
+  "1": new Date("2026-06-12T22:00:00+02:00"), // 103K venerdi 22:00
+  "2": new Date("2026-06-13T00:00:00+02:00"), // 72K  sabato 00:00
+  "3": new Date("2026-06-13T05:30:00+02:00"), // 55K  sabato 05:30
+};
+
+function formatTimer(contest, finishTime, isDNF){
+  const start = RACE_START[contest];
+  const now = new Date();
+  if(isDNF) return {value:"Ritirato", cls:"", icon:"❌"};
+  if(finishTime && finishTime !== "n.a." && !finishTime.startsWith("C(")){
+    // Già arrivato - mostra il tempo finale
+    return {value: finishTime, cls:"finished", icon:"🏁"};
+  }
+  if(now < start){
+    const diff = start - now;
+    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+    return {value: `Partenza tra ${h}h ${String(m).padStart(2,"0")}m`, cls:"", icon:"⏳"};
+  }
+  // In gara
+  const elapsed = now - start;
+  const h = Math.floor(elapsed/3600000);
+  const m = Math.floor((elapsed%3600000)/60000);
+  const s = Math.floor((elapsed%60000)/1000);
+  return {value: `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`, cls:"running", icon:"⏱️"};
+}
+
+const RACE_TOTALS = { "1": 407, "2": 393, "3": 650 };
+
+const ATHLETES = [
+  { name:"Paolo Alessandrini", bib:"185",  contest:"1", raceLabel:"103K", color:"#e8873a", geoEvent:"5423", geoId:"323839", gpxFile:"103k",
+    splits:["Partenza","Passo Duran","Passo Staulanza","Zoppè","Passo Cibiana","Arrivo"],
+    splitKm:[0,29,54,65,84,103], totalKm:103,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.33006, lng:12.12644, ele:1597, km:28.85 },
+      { name:"Passo Staulanza", lat:46.42667, lng:12.08256, ele:1867, km:54.0  },
+      { name:"Zoppè",           lat:46.40083, lng:12.16480, ele:1829, km:64.96 },
+      { name:"Passo Cibiana",   lat:46.36444, lng:12.25765, ele:1737, km:84.41 },
+    ] },
+  { name:"Mauro Mazzonetto",   bib:"1103", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:"324198", gpxFile:"72k",
+    splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
+    splitKm:[0,33,44,60,74], totalKm:74,
+    checkpointCoords:[
+      { name:"Fusine",        lat:46.37412, lng:12.12832, ele:1178, km:33.33 },
+      { name:"Zoppè",         lat:46.38604, lng:12.17450, ele:1452, km:44.39 },
+      { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
+    ] },
+  { name:"Alessio Pellizzon",  bib:"1147", contest:"2", raceLabel:"72K",  color:"#6ab0d4", geoEvent:"5424", geoId:"324242", gpxFile:"72k",
+    splits:["Partenza","Fusine","Zoppè","Passo Cibiana","Arrivo"],
+    splitKm:[0,33,44,60,74], totalKm:74,
+    checkpointCoords:[
+      { name:"Fusine",        lat:46.37412, lng:12.12832, ele:1178, km:33.33 },
+      { name:"Zoppè",         lat:46.38604, lng:12.17450, ele:1452, km:44.39 },
+      { name:"Passo Cibiana", lat:46.37307, lng:12.25913, ele:1528, km:59.83 },
+    ] },
+  { name:"Seraina Rizzardini", bib:"2356", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:"324855", gpxFile:"55k",
+    splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
+    splitKm:[0,11,26,55], totalKm:55,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.32721, lng:12.09662, ele:1602, km:11.23 },
+      { name:"Passo Staulanza", lat:46.40827, lng:12.07611, ele:1826, km:25.83 },
+    ] },
+  { name:"Sergio Marcellin",   bib:"2357", contest:"3", raceLabel:"55K",  color:"#4caf7d", geoEvent:"5425", geoId:"324856", gpxFile:"55k",
+    splits:["Partenza","Passo Duran","Passo Staulanza","Arrivo"],
+    splitKm:[0,11,26,55], totalKm:55,
+    checkpointCoords:[
+      { name:"Passo Duran",     lat:46.32721, lng:12.09662, ele:1602, km:11.23 },
+      { name:"Passo Staulanza", lat:46.40827, lng:12.07611, ele:1826, km:25.83 },
+    ] },
+];
+
+const INTER_LISTS = {
+  "1":[{list:"RESULT PRESENTER|Inter1_all_new",label:"Passo Duran"},{list:"RESULT PRESENTER|Inter3_all_new",label:"Passo Staulanza"},{list:"RESULT PRESENTER|Inter4_all_new",label:"Zoppè"},{list:"RESULT PRESENTER|Inter5_all_new",label:"Passo Cibiana"}],
+  "2":[{list:"RESULT PRESENTER|Inter2_all_new",label:"Fusine"},{list:"RESULT PRESENTER|Inter4_all_new",label:"Zoppè"},{list:"RESULT PRESENTER|Inter5_all_new",label:"Passo Cibiana"}],
+  "3":[{list:"RESULT PRESENTER|Inter1_all_new",label:"Passo Duran"},{list:"RESULT PRESENTER|Inter3_all_new",label:"Passo Staulanza"}],
+};
+
+// Cache
+let gpsCache = {}, gpxCache = {}, mapObjects = {}, chartObjects = {}, geoIdCache = {};
+
+// Restituisce il nome del prossimo checkpoint non ancora passato
+function nextCheckpointName(athlete, splits){
+  const checkpointSplits = athlete.splits.slice(1); // escludi Partenza
+  for(const sp of checkpointSplits){
+    if(sp === 'Arrivo') continue;
+    if(!splits[sp]) return sp; // primo non ancora passato
+  }
+  return 'Arrivo';
+}
+let autoRefresh = false, autoTimer = null;
+let startTimes = {};  // bib -> timestamp partenza stimata
+
+// Calcola ETA con Fattore K: +10km ogni 1000m D+, -5km ogni 1000m D-
+function calcElevationFactors(gpx, fromIdx, toIdx){
+  let dp = 0, dn = 0;
+  const NOISE = 2;
+  for(let i = fromIdx+1; i <= Math.min(toIdx, gpx.length-1); i++){
+    const delta = gpx[i][2] - gpx[i-1][2];
+    if(delta > NOISE) dp += delta;
+    else if(delta < -NOISE) dn += Math.abs(delta);
+  }
+  return { dp, dn };
+}
+
+function calcETA(athlete, kmGPS, gpx, gpsIdx){
+  if(kmGPS === null || kmGPS < 1 || !gpx || gpsIdx === null) return null;
+  const start = RACE_START[athlete.contest];
+  const now   = new Date();
+  if(now <= start) return null;
+  const elapsedH = (now - start) / 3600000;
+  if(elapsedH < 0.1) return null;
+
+  // Fattore K sui km già percorsi → pace equivalente
+  const { dp: dpDone, dn: dnDone } = calcElevationFactors(gpx, 0, gpsIdx);
+  const kmEqDone = kmGPS + dpDone/1000*10 - dnDone/1000*5;
+  const paceEqH  = kmEqDone / elapsedH;
+  if(paceEqH < 0.5 || paceEqH > 30) return null;
+
+  // Fattore K sui km rimanenti
+  const { dp: dpRem, dn: dnRem } = calcElevationFactors(gpx, gpsIdx, gpx.length-1);
+  const kmRealRem = gpx[gpx.length-1][3]/1000 - kmGPS;
+  const kmEqRem   = kmRealRem + dpRem/1000*10 - dnRem/1000*5;
+
+  const etaH    = kmEqRem / paceEqH;
+  const etaDate = new Date(now.getTime() + etaH * 3600000);
+  const hh = etaDate.getHours().toString().padStart(2,'0');
+  const mm = etaDate.getMinutes().toString().padStart(2,'0');
+  const remH = Math.floor(etaH);
+  const remM = Math.round((etaH - remH) * 60);
+  const paceMin = Math.round(60 / (kmGPS / elapsedH));
+
+  return {
+    time: `${hh}:${mm}`,
+    remaining: remH > 0 ? `tra ${remH}h ${String(remM).padStart(2,'0')}m` : `tra ${remM}m`,
+    paceMin,
+    dpRem: Math.round(dpRem),
+    dnRem: Math.round(dnRem),
+  };
+}
+
+async function fetchProxy(listname, contest, bib){
+  const r = await fetch(`/api/raceresult?listname=${encodeURIComponent(listname)}&contest=${contest}&bib=${encodeURIComponent(bib)}`);
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  return r.json();
+}
+
+async function fetchGPS(eventId){
+  const r = await fetch(`/api/raceresult?action=gps&eventId=${eventId}`);
+  if(!r.ok) return {};
+  const data = await r.json();
+  const byBib = {};
+  for(const p of (data.data||[])){
+    byBib[String(p.la)] = p;
+    // Salva ID interno (campo 'i') per usarlo nel dettaglio
+    geoIdCache[`${eventId}_${p.la}`] = p.i;
+  }
+  gpsCache[eventId] = byBib;
+  return byBib;
+}
+
+async function fetchGPSDetail(eventId, geoId){
+  if(!geoId) return null;
+  try {
+    const r = await fetch(`/api/raceresult?action=gpsdetail&eventId=${eventId}&participantId=${geoId}`);
+    if(!r.ok) return null;
+    return r.json();
+  } catch(e){ return null; }
+}
+
+async function fetchGPX(raceName){
+  if(gpxCache[raceName]) return gpxCache[raceName];
+  const r = await fetch(`/gpx-${raceName}.json`);
+  if(!r.ok) return null;
+  const pts = await r.json();  // [[lat,lng,ele,distM], ...]
+  gpxCache[raceName] = pts;
+  return pts;
+}
+
+function findBib(data, bib){
+  if(!data) return null;
+  for(const gk of Object.keys(data)){
+    const g = data[gk];
+    if(typeof g === "object" && !Array.isArray(g)){
+      for(const sk of Object.keys(g)){
+        const rows = g[sk];
+        if(Array.isArray(rows)) for(const row of rows)
+          if(Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
+      }
+    } else if(Array.isArray(g)){
+      for(const row of g) if(Array.isArray(row) && String(row[0]).trim() === String(bib).trim()) return row;
+    }
+  }
+  return null;
+}
+
+// Trova punto GPX più vicino a lat/lng dati
+function nearestGPXPoint(gpx, lat, lng){
+  let best = 0, bestDist = Infinity;
+  for(let i=0; i<gpx.length; i++){
+    const dlat = gpx[i][0]-lat, dlng = gpx[i][1]-lng;
+    const d = dlat*dlat + dlng*dlng;
+    if(d < bestDist){ bestDist=d; best=i; }
+  }
+  return best;
+}
+
+// Calcola posizione stimata GPS per un atleta rispetto agli altri della stessa gara
+// Restituisce {pos, total} dove total = iscritti totali alla gara
+function calcGPSRank(athlete, gpsByEvent, gpxByName){
+  const allGPS = gpsByEvent[athlete.geoEvent];
+  const gpx = gpxByName[athlete.gpxFile];
+  if(!allGPS || !gpx) return null;
+
+  // Km del nostro atleta
+  const myGPS = allGPS[athlete.bib];
+  if(!myGPS) return null;
+  const myIdx = nearestGPXPoint(gpx, parseFloat(myGPS.lt), parseFloat(myGPS.lg));
+  const myKm = gpx[myIdx][3];
+
+  // Filtra coordinate UK (sede GeoTracks = no fix GPS) - lat > 49 = UK
+  const validUK = p => parseFloat(p.lt) > 49;
+
+  // Calcola km di tutti gli atleti della stessa gara con GPS valido
+  let ahead = 0;
+  for(const bib of Object.keys(allGPS)){
+    const p = allGPS[bib];
+    if(validUK(p)) continue; // no fix GPS
+    const idx = nearestGPXPoint(gpx, parseFloat(p.lt), parseFloat(p.lg));
+    const km = gpx[idx][3];
+    if(km > myKm) ahead++;
+  }
+
+  const pos = ahead + 1;
+  const total = RACE_TOTALS[athlete.contest];
+  return { pos, total };
+}
+
+async function loadAthlete(athlete){
+  const [mainRes, ...splitRes] = await Promise.allSettled([
+    fetchProxy("Result Lists|CLASSIFICA GENERALE ASSOLUTA", athlete.contest, athlete.bib),
+    ...INTER_LISTS[athlete.contest].map(il => fetchProxy(il.list, "0", athlete.bib))
+  ]);
+  let mainRow = null;
+  if(mainRes.status === "fulfilled") mainRow = findBib(mainRes.value?.data, athlete.bib);
+  const splits = {};
+  INTER_LISTS[athlete.contest].forEach((il,i) => {
+    if(splitRes[i].status === "fulfilled"){
+      const row = findBib(splitRes[i].value?.data, athlete.bib);
+      if(row) splits[il.label] = row;
+    }
+  });
+  return { mainRow, splits };
+}
+
+async function refreshAll(){
+  const btn = document.getElementById("refreshBtn");
+  const icon = document.getElementById("refreshIcon");
+  const dot = document.getElementById("statusDot");
+  btn.disabled=true; icon.className="spinning"; dot.className="status-dot live";
+  gpsCache = {};
+
+  const container = document.getElementById("cardsContainer");
+  const empty = container.querySelector("div[style*='padding:80px']");
+  if(empty) empty.remove();
+
+  const uniqueEvents = [...new Set(ATHLETES.map(a=>a.geoEvent))];
+  const uniqueGpx    = [...new Set(ATHLETES.map(a=>a.gpxFile))];
+
+  const [athleteResults, gpsResults, gpxResults] = await Promise.all([
+    Promise.all(ATHLETES.map(a => loadAthlete(a))),
+    Promise.all(uniqueEvents.map(id => fetchGPS(id))),
+    Promise.all(uniqueGpx.map(n => fetchGPX(n))),
+  ]);
+
+  // Fetch dettagli GPS (ETA, velocità) per ogni atleta con GPS attivo
+  const detailResults = await Promise.all(ATHLETES.map(a => {
+    const geoId = a.geoId || geoIdCache[`${a.geoEvent}_${a.bib}`] || null;
+    return geoId ? fetchGPSDetail(a.geoEvent, geoId) : Promise.resolve(null);
+  }));
+
+  const gpsByEvent = {};
+  uniqueEvents.forEach((id,i) => gpsByEvent[id] = gpsResults[i]);
+  const gpxByName = {};
+  uniqueGpx.forEach((n,i) => gpxByName[n] = gpxResults[i]);
+
+  athleteResults.forEach((res, i) => {
+    const a = ATHLETES[i];
+    const gpsData = gpsByEvent[a.geoEvent]?.[a.bib] || null;
+    const gpxData = gpxByName[a.gpxFile] || null;
+    const gpsRank = calcGPSRank(a, gpsByEvent, gpxByName);
+    const detail  = detailResults[i] || null;
+    renderCard(a, res.mainRow, res.splits, gpsData, gpxData, gpsRank, detail);
+  });
+
+  const now = new Date().toLocaleTimeString("it-IT");
+  document.getElementById("lastUpdate").textContent = "⟳ Aggiornato alle "+now;
+  btn.disabled=false; icon.className=""; icon.textContent="↻";
+  setTimeout(()=>dot.className="status-dot",3000);
+}
+
+function formatElapsed(start){
+  const s = Math.floor((Date.now()-start)/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return `${h}h ${String(m).padStart(2,"0")}m`;
+}
+
+function renderCard(athlete, row, splits, gps, gpx, gpsRank, detail){
+  const container = document.getElementById("cardsContainer");
+  const cardId = "card-"+athlete.bib;
+  let card = document.getElementById(cardId);
+  const isNew = !card;
+  if(isNew){ card=document.createElement("div"); card.id=cardId; card.className="athlete-card"; container.appendChild(card); }
+
+  const finishTime = row?.[6]?.trim();
+  const hasFinished = finishTime && finishTime!=="" && finishTime!=="n.a." && !finishTime.startsWith("C(");
+  const isDNF = row?.[2] && String(row[2]).includes("DNF");
+  const rank = row?.[2]||null;
+  const name = row?.[3]||athlete.name;
+  const club = (row?.[5]||"").trim();
+
+  card.className = "athlete-card"+(hasFinished?" finished":isDNF?" dnf":"");
+
+  // Km da GPS se disponibile
+  let kmGPS = null, gpsIdx = null;
+  if(gps && gpx){
+    const idx = nearestGPXPoint(gpx, parseFloat(gps.lt), parseFloat(gps.lg));
+    gpsIdx = idx;
+    kmGPS = gpx[idx][3]/1000;
+  }
+
+  // Km da checkpoint
+  let lastCpIdx = 0;
+  athlete.splits.forEach((sp,i)=>{ if(splits[sp]) lastCpIdx=i; });
+  if(hasFinished) lastCpIdx = athlete.splits.length-1;
+
+  // Se il GPS dice che è oltre un checkpoint che il chip non ha registrato,
+  // aggiorna lastCpIdx usando i km GPS (chip non letto = errore timing)
+  if(kmGPS !== null){
+    athlete.splitKm.forEach((cpKm, i) => {
+      if(kmGPS >= cpKm && i > lastCpIdx) lastCpIdx = i;
+    });
+  }
+
+  const kmCheckpoint = athlete.splitKm[lastCpIdx]||0;
+  const kmDone = (kmGPS !== null && kmGPS > kmCheckpoint) ? kmGPS : kmCheckpoint;
+  const pct = Math.min(100, Math.round((kmDone/athlete.totalKm)*100));
+
+  const statusHtml = hasFinished?`<span class="card-status status-done">✓ Arrivato</span>`:
+    isDNF?`<span class="card-status status-dnf">Ritirato</span>`:
+    (gps||Object.keys(splits).length>0)?`<span class="card-status status-running">In gara</span>`:
+    `<span class="card-status status-wait">In attesa</span>`;
+
+  // GPS row
+  let gpsRowHtml = "";
+  if(gps){
+    const lat=parseFloat(gps.lt).toFixed(5), lng=parseFloat(gps.lg).toFixed(5);
+    const isMoving = gps.s===1;
+    const mapsUrl = `https://www.google.com/maps?q=${gps.lt},${gps.lg}`;
+    const ele = gpx && gpsIdx!==null ? Math.round(gpx[gpsIdx][2])+"m" : "—";
+    gpsRowHtml = `<div class="card-gps-row">
+      <div class="gps-dot${isMoving?" active":""}"></div>
+      <div class="gps-text">
+        <strong>GPS live</strong> · ${isMoving?"in movimento":"fermo"} · <span class="gps-coords">${lat}, ${lng}</span> · alt. ${ele}
+      </div>
+      <a class="btn-sm" href="${mapsUrl}" target="_blank">📍 Maps</a>
+    </div>`;
+  } else {
+    gpsRowHtml = `<div class="card-gps-row"><div class="gps-dot"></div><div class="gps-text" style="color:var(--muted)">Tracker GPS non ancora attivo</div></div>`;
+  }
+
+  // Splits timeline
+  let splitsHtml = '<div class="splits-timeline">';
+  athlete.splits.forEach((sp,i)=>{
+    const isDone = i===0||!!splits[sp]||(sp==="Arrivo"&&hasFinished)||i<=lastCpIdx;
+    const isLast = i===athlete.splits.length-1;
+    const isCurrent = !isDone&&i>0&&(i-1)<=lastCpIdx;
+    let timeHtml="";
+    if(sp!=="Partenza"&&splits[sp]){const t=Array.isArray(splits[sp])?splits[sp][6]:"";if(t&&t!=="n.a.") timeHtml=`<div class="split-time">${t}</div>`;}
+    if(sp==="Arrivo"&&hasFinished) timeHtml=`<div class="split-time">${finishTime}</div>`;
+    const dotCls=(isLast&&isDone)?"split-dot finish done":isDone?"split-dot done":isCurrent?"split-dot current":"split-dot";
+    const itemCls=isDone?"split-item done":"split-item";
+    const icon=isDone?"✓":isCurrent?"●":"";
+    splitsHtml+=`<div class="${itemCls}"><div class="${dotCls}">${icon}</div><div class="split-label">${sp.replace("Passo ","")}</div>${timeHtml}</div>`;
+  });
+  splitsHtml+="</div>";
+
+  // Timer
+  const timer = formatTimer(athlete.contest, finishTime, isDNF);
+  const timerHtml = `<div class="card-timer">
+    <span class="timer-icon">${timer.icon}</span>
+    <span class="timer-text">Tempo in gara</span>
+    <span class="timer-value ${timer.cls}">${timer.value}</span>
+  </div>`;
+
+  const total = RACE_TOTALS[athlete.contest] || "?";
+  const rankNum = rank && rank !== "n.a." && !String(rank).includes("DNF") ? rank : null;
+
+  // Posizione: da GeoTracks (detail.position) se disponibile,
+  // poi rank ufficiale raceresult, poi niente
+  let posHtml = "";
+  const geoPosRaw = detail && detail.position ? parseInt(detail.position) : null;
+  const geoPos = (geoPosRaw && geoPosRaw > 0) ? geoPosRaw : null;
+  const rankOffNum = rankNum ? parseInt(rankNum) : null;
+
+  if(hasFinished && rankNum){
+    posHtml = `<div class="stat">
+      <div class="stat-label">Posizione finale</div>
+      <div style="display:flex;align-items:baseline;gap:4px">
+        <span style="font-size:22px;font-weight:900;color:${athlete.color}">#${rankNum}</span>
+        <span style="font-size:12px;color:var(--muted)">/ ${total}</span>
+      </div>
+    </div>`;
+  } else if(!isDNF && !hasFinished){
+    let displayPos = null, label = "";
+    if(geoPos !== null){
+      displayPos = geoPos;
+      label = "Posizione live";
+    } else if(rankOffNum !== null){
+      displayPos = rankOffNum;
+      label = "Posizione ufficiale";
+    }
+    if(displayPos !== null){
+      posHtml = `<div class="stat">
+        <div class="stat-label">${label}</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span style="font-size:22px;font-weight:900;color:${athlete.color}">#${displayPos}</span>
+          <span style="font-size:12px;color:var(--muted)">/ ${total}</span>
+        </div>
+      </div>`;
+    }
+  }
+
+  const statsHtml = `<div class="card-stats">
+    ${posHtml}
+    ${hasFinished?`<div class="stat"><div class="stat-label">Tempo finale</div><div class="stat-value hi">${finishTime}</div></div>`:""}
+    ${row&&row[7]&&row[7]!=="n.a."&&row[7].trim()?`<div class="stat"><div class="stat-label">Gap dal 1°</div><div class="stat-value">${row[7]}</div></div>`:""}
+    ${kmGPS!==null?`<div class="stat"><div class="stat-label">Km GPS</div><div class="stat-value">${kmGPS.toFixed(1)} km</div></div>`:""}
+  </div>`;
+
+  const mapId = "map-"+athlete.bib;
+  const chartId = "chart-"+athlete.bib;
+
+  // ETA da GeoTracks (dati reali) — nessun fallback
+  let etaHtml = '';
+  if(!hasFinished && !isDNF && detail && detail.totalTime && detail.totalTime !== '00:00:00'){
+    // Orario arrivo: start + totalTime
+    const start = RACE_START[athlete.contest];
+    const [th,tm,ts] = detail.totalTime.split(':').map(Number);
+    const etaDate = new Date(start.getTime() + (th*3600+tm*60+ts)*1000);
+    const hh = etaDate.getHours().toString().padStart(2,'0');
+    const mm = etaDate.getMinutes().toString().padStart(2,'0');
+    const speed = detail.speed || '';
+
+    // Prossimo rilevatore GPS (non il nostro checkpoint raceresult —
+    // GeoTracks ha checkpoint diversi che non corrispondono per km)
+    const nextCpTime = detail.nextCp && detail.nextCp !== '00:00:00'
+      ? detail.nextCp.slice(0,5) : null;
+
+    etaHtml = `<div style="padding:8px 16px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:5px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>🏁</span>
+        <span>Arrivo stimato: <strong style="color:var(--text);font-size:13px;">${hh}:${mm}</strong></span>
+        <span style="opacity:0.3">·</span>
+        <span>${detail.timeLeft ? 'tra ' + detail.timeLeft.slice(0,5) : ''}</span>
+        ${speed ? `<span style="opacity:0.3">·</span><span>${speed}</span>` : ''}
+        <span style="margin-left:auto;font-size:10px;opacity:0.5;font-style:italic">GeoTracks</span>
+      </div>
+      ${nextCpTime ? `<div style="display:flex;align-items:center;gap:6px;padding-left:2px;">
+        <span>📍</span>
+        <span>Al prossimo rilevatore GPS tra: <strong style="color:${athlete.color}">${nextCpTime}</strong></span>
+      </div>` : ''}
+    </div>`;
+  }
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-bib" style="color:${athlete.color}">${athlete.bib}</div>
+      <div style="flex:1"><div class="card-name">${esc(name)}</div>${club?`<div class="card-club">${esc(club)}</div>`:""}</div>
+      <span class="race-badge" style="background:${athlete.color}22;color:${athlete.color}">${athlete.raceLabel}</span>
+      ${statusHtml}
+    </div>
+    ${gpsRowHtml}
+    ${timerHtml}
+    <button class="card-map-toggle-btn" id="toggle-${athlete.bib}" onclick="toggleMap('${athlete.bib}')">
+      🗺️ Mappa + profilo altimetrico
+      <span class="toggle-arrow">▼</span>
+    </button>
+    <div class="card-map-collapsible" id="mapcoll-${athlete.bib}">
+      <div id="${mapId}" class="card-map"></div>
+      <div class="card-elevation">
+        <div class="elevation-label">Profilo altimetrico · quota lungo il percorso</div>
+        <div class="elevation-chart-wrap"><canvas id="${chartId}"></canvas></div>
+      </div>
+    </div>
+    <div class="card-progress">
+      <div class="progress-label"><span>Avanzamento</span><strong>${kmDone.toFixed(1)} / ${athlete.totalKm} km · ${pct}%</strong></div>
+      <div class="progress-bar-wrap"><div class="progress-bar${hasFinished?" done":""}" style="width:${pct}%"></div></div>
+    </div>
+    <div class="card-splits"><div class="splits-label">Checkpoint</div>${splitsHtml}</div>
+    ${statsHtml}
+    ${etaHtml}`;
+
+  // Mappa e chart inizializzati lazy al primo click sul toggle
+}
+
+function initMap(mapId, athlete, gpx, gps, gpsIdx){
+  // Rimuovi mappa precedente se esiste
+  if(mapObjects[mapId]){ mapObjects[mapId].remove(); delete mapObjects[mapId]; }
+
+  const mapEl = document.getElementById(mapId);
+  if(!mapEl) return;
+
+  // Centro: usa posizione GPS se disponibile, altrimenti centro del percorso
+  let center, zoom;
+  if(gps){ center=[parseFloat(gps.lt), parseFloat(gps.lg)]; zoom=14; }
+  else if(gpx){ const mid=Math.floor(gpx.length/2); center=[gpx[mid][0],gpx[mid][1]]; zoom=12; }
+  else{ center=[46.35,12.18]; zoom=12; }
+
+  const map = L.map(mapId, { zoomControl:true, attributionControl:false }).setView(center, zoom);
+  mapObjects[mapId] = map;
+
+  // Tile layer topografico
+  // Base layer sbiadito
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom:17, opacity:0.42
+  }).addTo(map);
+  // Overlay scuro per far risaltare il tracciato
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom:19, opacity:0.45
+  }).addTo(map);
+
+  // Tracciato GPX
+  if(gpx){
+    const latlngs = gpx.map(p=>[p[0],p[1]]);
+    L.polyline(latlngs, {color:athlete.color, weight:4.5, opacity:1.0}).addTo(map);
+    L.polyline(latlngs, {color:athlete.color, weight:10, opacity:0.18}).addTo(map);
+
+    // Hover sulla mappa: puntino mobile sul tracciato + sync grafico
+    const hoverDot = L.circleMarker([latlngs[0][0],latlngs[0][1]], {
+      radius:6, color:'#fff', fillColor:athlete.color, fillOpacity:0, opacity:0, weight:2
+    }).addTo(map);
+
+    map.on('mousemove', function(e){
+      let bestI=0, bestD=Infinity;
+      for(let i=0;i<gpx.length;i++){
+        const d=map.distance(e.latlng, L.latLng(gpx[i][0],gpx[i][1]));
+        if(d<bestD){bestD=d;bestI=i;}
+      }
+      if(bestD>600){
         hoverDot.setStyle({opacity:0,fillOpacity:0});
         hoverDot.unbindTooltip();
         const ch=chartObjects['chart-'+athlete.bib];
