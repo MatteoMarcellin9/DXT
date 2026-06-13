@@ -89,10 +89,11 @@ async function getGPS(eventId) {
 }
 
 async function getGPX(race) {
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://dxt-olive.vercel.app";
-  const r = await fetch(`${base}/gpx-${race}.json`);
+  // Usa GitHub raw per evitare self-referencing fetch (non supportato su Vercel serverless)
+  const r = await fetch(
+    `https://raw.githubusercontent.com/MatteoMarcellin9/DXT/main/public/gpx-${race}.json`,
+    { headers: { "User-Agent": "DXT-notify" } }
+  );
   if (!r.ok) return null;
   return r.json();
 }
