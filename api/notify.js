@@ -1,22 +1,24 @@
-const BOT_TOKEN = "8835936118:AAGS9iIlUpi0cAJDGdw79mNZpkPuF32ThvE";
-const CHAT_ID   = "1114071612";
+const BOT_TOKEN  = "8835936118:AAGS9iIlUpi0cAJDGdw79mNZpkPuF32ThvE";
+const CHAT_ID    = "1114071612";
+const GH_TOKEN   = process.env.GH_TOKEN;
+const GH_REPO    = "MatteoMarcellin9/DXT";
+const STATE_PATH = "api/notified_state.json";
 
-// Checkpoint con km precisi (da GeoTracks)
 const CHECKPOINTS = {
-  "1": [ // 103K
+  "1": [
     { name:"Passo Duran",     km:28.85 },
     { name:"Passo Staulanza", km:54.00 },
     { name:"Zoppè",           km:64.96 },
     { name:"Passo Cibiana",   km:84.41 },
     { name:"Arrivo",          km:101.25 },
   ],
-  "2": [ // 72K
+  "2": [
     { name:"Fusine",          km:33.33 },
     { name:"Zoppè",           km:44.39 },
     { name:"Passo Cibiana",   km:59.83 },
     { name:"Arrivo",          km:74.41 },
   ],
-  "3": [ // 55K
+  "3": [
     { name:"Passo Duran",     km:11.23 },
     { name:"Passo Staulanza", km:25.83 },
     { name:"Arrivo",          km:55.28 },
@@ -31,9 +33,49 @@ const ATHLETES = [
   { name:"Sergio Marcellin",   bib:"2357", contest:"3", geoEvent:"5425", color:"🟢" },
 ];
 
-// Stato notifiche in memoria (si resetta ad ogni cold start, ma ok per una gara)
-// Usiamo una chiave "bib_checkpoint" per non notificare due volte
-const notified = new Set();
+const ALERT_KM = {
+  "Paolo Alessandrini_Passo Staulanza": [5, 1],
+  "Seraina Rizzardini_Passo Staulanza": [5, 1],
+  "Sergio Marcellin_Passo Staulanza":   [5, 1],
+};
+const DEFAULT_ALERTS = [1];
+
+const GPX_FILE = { "1":"103k", "2":"72k", "3":"55k" };
+
+// Leggi stato notifiche da GitHub
+async function loadState() {
+  try {
+    const r = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/${STATE_PATH}`,
+      { headers: { "Authorization": `token ${GH_TOKEN}`, "User-Agent": "DXT-notify" } }
+    );
+    if (!r.ok) return { notified: [], sha: null };
+    const d = await r.json();
+    const content = JSON.parse(atob(d.content.replace(/\n/g, "")));
+    return { notified: content.notified || [], sha: d.sha };
+  } catch(e) {
+    return { notified: [], sha: null };
+  }
+}
+
+// Salva stato su GitHub
+async function saveState(notified, sha) {
+  const content = btoa(JSON.stringify({ notified, updated: new Date().toISOString() }));
+  const body = { message: "Update notify state", content };
+  if (sha) body.sha = sha;
+  await fetch(
+    `https://api.github.com/repos/${GH_REPO}/contents/${STATE_PATH}`,
+    {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${GH_TOKEN}`,
+        "Content-Type": "application/json",
+        "User-Agent": "DXT-notify"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
 
 async function getGPS(eventId) {
   const r = await fetch(`https://www.geotracks.co.uk/live/${eventId}/participants`, {
@@ -47,7 +89,6 @@ async function getGPS(eventId) {
 }
 
 async function getGPX(race) {
-  // Usa i dati GPX dal sito stesso
   const base = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "https://dxt-olive.vercel.app";
@@ -74,12 +115,13 @@ async function sendTelegram(text) {
   });
 }
 
-const GPX_FILE = { "1":"103k", "2":"72k", "3":"55k" };
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
-  // Carica tutti i GPS e GPX in parallelo
+  // Carica stato persistente
+  const { notified: notifiedArr, sha: stateSha } = await loadState();
+  const notified = new Set(notifiedArr);
+
   const uniqueEvents = [...new Set(ATHLETES.map(a => a.geoEvent))];
   const uniqueRaces  = [...new Set(ATHLETES.map(a => GPX_FILE[a.contest]))];
 
@@ -95,22 +137,10 @@ export default async function handler(req, res) {
 
   const notifications = [];
 
-  // Soglie di notifica per checkpoint specifici
-  // Default: solo 1km prima. Per alcuni: anche 5km prima
-  const ALERT_KM = {
-    "Paolo Alessandrini_Passo Staulanza": [5, 1],
-    "Seraina Rizzardini_Passo Staulanza": [5, 1],
-    "Sergio Marcellin_Passo Staulanza":   [5, 1],
-    "Mauro Mazzonetto_Fusine":            [1],
-    "Alessio Pellizzon_Fusine":           [1],
-  };
-  // Default per tutti gli altri checkpoint: 1km
-  const DEFAULT_ALERTS = [1];
-
   for (const athlete of ATHLETES) {
     const gps = gpsByEvent[athlete.geoEvent]?.[athlete.bib];
     if (!gps) continue;
-    if (parseFloat(gps.lt) > 49) continue; // coordinate UK = no GPS fix
+    if (parseFloat(gps.lt) > 49) continue;
 
     const gpx = gpxByRace[GPX_FILE[athlete.contest]];
     if (!gpx) continue;
@@ -120,7 +150,7 @@ export default async function handler(req, res) {
 
     for (const cp of checkpoints) {
       const kmToGo = cp.km - kmNow;
-      if (kmToGo < 0 || kmToGo > 6) continue; // fuori range, salta
+      if (kmToGo < 0 || kmToGo > 6) continue;
 
       const alertKey = `${athlete.name}_${cp.name}`;
       const thresholds = ALERT_KM[alertKey] || DEFAULT_ALERTS;
@@ -143,6 +173,11 @@ export default async function handler(req, res) {
         }
       }
     }
+  }
+
+  // Salva stato aggiornato se ci sono nuove notifiche
+  if (notifications.length > 0) {
+    await saveState([...notified], stateSha);
   }
 
   return res.status(200).json({
