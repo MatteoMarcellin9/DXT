@@ -14,6 +14,7 @@ const CHECKPOINTS = {
   ],
   "2": [
     { name:"Fusine",          km:33.33 },
+    { name:"Coi",             km:34.60 },
     { name:"Zoppè",           km:44.39 },
     { name:"Passo Cibiana",   km:59.83 },
     { name:"Arrivo",          km:74.41 },
