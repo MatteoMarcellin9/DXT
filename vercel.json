@@ -3,7 +3,6 @@
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/:path*", "destination": "/public/:path*" }
   ],
-  // deployed: 2026-06-13T05:21:13.049022
   "crons": [
     {
       "path": "/api/notify",
