@@ -21,7 +21,8 @@ const CHECKPOINTS = {
   ],
   "3": [
     { name:"Passo Duran",     km:11.23 },
-    { name:"Passo Staulanza", km:25.83 },
+    { name:"Malga Pioda",     km:25.60 },
+    { name:"Passo Staulanza", km:36.10 },
     { name:"Arrivo",          km:55.28 },
   ],
 };
@@ -38,6 +39,8 @@ const ALERT_KM = {
   "Paolo Alessandrini_Passo Staulanza": [5, 1],
   "Seraina Rizzardini_Passo Staulanza": [5, 1],
   "Sergio Marcellin_Passo Staulanza":   [5, 1],
+  "Seraina Rizzardini_Malga Pioda":     [10, 1],
+  "Sergio Marcellin_Malga Pioda":       [10, 1],
 };
 const DEFAULT_ALERTS = [1];
 
