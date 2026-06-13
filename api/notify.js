@@ -150,23 +150,31 @@ export default async function handler(req, res) {
 
     for (const cp of checkpoints) {
       const kmToGo = cp.km - kmNow;
-      if (kmToGo < 0 || kmToGo > 6) continue;
+      // Considera range: da 6km prima fino a 2km dopo il checkpoint
+      // (i 2km dopo permettono di catturare chi è già passato senza notifica)
+      if (kmToGo < -2 || kmToGo > 6) continue;
 
       const alertKey = `${athlete.name}_${cp.name}`;
       const thresholds = ALERT_KM[alertKey] || DEFAULT_ALERTS;
 
       for (const threshold of thresholds) {
         const key = `${athlete.bib}_${cp.name}_${threshold}km`;
+        // Scatta se è entro la soglia (incluso leggermente oltre = già passato)
         if (kmToGo <= threshold && !notified.has(key)) {
           notified.add(key);
           const isArrivo = cp.name === "Arrivo";
+          const isAlreadyPast = kmToGo < 0;
           let msg;
           if (isArrivo) {
-            msg = `${athlete.color} *${athlete.name.split(" ")[0]}* sta per arrivare! 🏁\nManca meno di 1km al traguardo!`;
+            msg = isAlreadyPast
+              ? `${athlete.color} *${athlete.name.split(" ")[0]}* ha tagliato il traguardo! 🏁\n(rilevato al km ${kmNow.toFixed(1)})`
+              : `${athlete.color} *${athlete.name.split(" ")[0]}* sta per arrivare! 🏁\nManca meno di 1km al traguardo!`;
           } else if (threshold === 5) {
             msg = `${athlete.color} *${athlete.name.split(" ")[0]}* si avvicina a *${cp.name}* — ancora 5km 🏃\n(attualmente al km ${kmNow.toFixed(1)})`;
           } else {
-            msg = `${athlete.color} *${athlete.name.split(" ")[0]}* è quasi a *${cp.name}*! 📍\nManca meno di 1km (al km ${kmNow.toFixed(1)} di ${cp.km})`;
+            msg = isAlreadyPast
+              ? `${athlete.color} *${athlete.name.split(" ")[0]}* ha passato *${cp.name}*! ✅\n(rilevato al km ${kmNow.toFixed(1)})`
+              : `${athlete.color} *${athlete.name.split(" ")[0]}* è quasi a *${cp.name}*! 📍\nManca meno di 1km (al km ${kmNow.toFixed(1)} di ${cp.km})`;
           }
           notifications.push(msg);
           await sendTelegram(msg);
