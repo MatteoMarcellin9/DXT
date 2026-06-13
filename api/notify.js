@@ -95,12 +95,22 @@ export default async function handler(req, res) {
 
   const notifications = [];
 
+  // Soglie di notifica per checkpoint specifici
+  // Default: solo 1km prima. Per alcuni: anche 5km prima
+  const ALERT_KM = {
+    "Paolo Alessandrini_Passo Staulanza": [5, 1],
+    "Seraina Rizzardini_Passo Staulanza": [5, 1],
+    "Sergio Marcellin_Passo Staulanza":   [5, 1],
+    "Mauro Mazzonetto_Fusine":            [1],
+    "Alessio Pellizzon_Fusine":           [1],
+  };
+  // Default per tutti gli altri checkpoint: 1km
+  const DEFAULT_ALERTS = [1];
+
   for (const athlete of ATHLETES) {
     const gps = gpsByEvent[athlete.geoEvent]?.[athlete.bib];
     if (!gps) continue;
-
-    // Salta coordinate UK (no GPS fix)
-    if (parseFloat(gps.lt) > 49) continue;
+    if (parseFloat(gps.lt) > 49) continue; // coordinate UK = no GPS fix
 
     const gpx = gpxByRace[GPX_FILE[athlete.contest]];
     if (!gpx) continue;
@@ -109,18 +119,28 @@ export default async function handler(req, res) {
     const checkpoints = CHECKPOINTS[athlete.contest] || [];
 
     for (const cp of checkpoints) {
-      const key = `${athlete.bib}_${cp.name}`;
       const kmToGo = cp.km - kmNow;
+      if (kmToGo < 0 || kmToGo > 6) continue; // fuori range, salta
 
-      // Notifica se è entro 1km dal checkpoint e non ancora notificato
-      if (kmToGo >= 0 && kmToGo <= 1.0 && !notified.has(key)) {
-        notified.add(key);
-        const isArrivo = cp.name === "Arrivo";
-        const msg = isArrivo
-          ? `${athlete.color} *${athlete.name.split(" ")[0]}* sta per arrivare! 🏁\nManca meno di 1km al traguardo!`
-          : `${athlete.color} *${athlete.name.split(" ")[0]}* si avvicina a *${cp.name}*!\nManca ~${kmToGo.toFixed(1)} km (al km ${kmNow.toFixed(1)} di ${cp.km})`;
-        notifications.push(msg);
-        await sendTelegram(msg);
+      const alertKey = `${athlete.name}_${cp.name}`;
+      const thresholds = ALERT_KM[alertKey] || DEFAULT_ALERTS;
+
+      for (const threshold of thresholds) {
+        const key = `${athlete.bib}_${cp.name}_${threshold}km`;
+        if (kmToGo <= threshold && !notified.has(key)) {
+          notified.add(key);
+          const isArrivo = cp.name === "Arrivo";
+          let msg;
+          if (isArrivo) {
+            msg = `${athlete.color} *${athlete.name.split(" ")[0]}* sta per arrivare! 🏁\nManca meno di 1km al traguardo!`;
+          } else if (threshold === 5) {
+            msg = `${athlete.color} *${athlete.name.split(" ")[0]}* si avvicina a *${cp.name}* — ancora 5km 🏃\n(attualmente al km ${kmNow.toFixed(1)})`;
+          } else {
+            msg = `${athlete.color} *${athlete.name.split(" ")[0]}* è quasi a *${cp.name}*! 📍\nManca meno di 1km (al km ${kmNow.toFixed(1)} di ${cp.km})`;
+          }
+          notifications.push(msg);
+          await sendTelegram(msg);
+        }
       }
     }
   }
