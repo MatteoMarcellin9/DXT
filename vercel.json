@@ -4,10 +4,10 @@
     { "source": "/survey", "destination": "/public/survey.html" },
     { "source": "/:path*", "destination": "/public/:path*" }
   ],
+  "redirects": [
+    { "source": "/survey", "destination": "/survey.html", "permanent": false }
+  ],
   "crons": [
-    {
-      "path": "/api/notify",
-      "schedule": "*/5 * * * *"
-    }
+    { "path": "/api/notify", "schedule": "*/5 * * * *" }
   ]
 }
