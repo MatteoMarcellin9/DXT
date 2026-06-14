@@ -25,7 +25,7 @@ main{padding:14px;max-width:900px;margin:0 auto;}
 #map{height:320px;background:#0d1a24;}
 .elevation-wrap{padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);}
 .elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-#elev-chart{height:120px;}
+#elev-chart{height:120px;display:block;width:100%!important;}
 
 /* FORM COMMENTO */
 .comment-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
@@ -83,7 +83,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);
     <div id="map"></div>
     <div class="elevation-wrap">
       <div class="elevation-label">Profilo altimetrico</div>
-      <canvas id="elev-chart"></canvas>
+      <canvas id="elev-chart" height="120"></canvas>
     </div>
   </div>
 
@@ -280,7 +280,7 @@ function renderChart(){
       }]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,animation:false,
+      responsive:false,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>`km ${ctx[0].label}`,label:ctx=>`${Math.round(ctx.raw)}m slm`}}},
       scales:{
         x:{ticks:{color:'#7d8590',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'km',color:'#7d8590',font:{size:9}}},
