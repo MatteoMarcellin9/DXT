@@ -1,7 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/survey", "destination": "/public/survey.html" },
+    { "source": "/survey", "destination": "/survey.html" },
     { "source": "/:path*", "destination": "/public/:path*" }
   ],
   "crons": [
