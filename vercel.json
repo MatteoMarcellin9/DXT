@@ -4,10 +4,6 @@
     { "source": "/survey", "destination": "/public/survey.html" },
     { "source": "/:path*", "destination": "/public/:path*" }
   ],
-  "redirects": [
-    { "source": "/survey", "destination": "/survey.html", "permanent": false }
-  ],
-  "build": "034941",
   "crons": [
     { "path": "/api/notify", "schedule": "*/5 * * * *" }
   ]
