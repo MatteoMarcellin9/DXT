@@ -10,14 +10,12 @@ async function loadComments() {
   );
   if (!r.ok) return { comments: [], sha: null };
   const d = await r.json();
-  const content = JSON.parse(atob(d.content.replace(/\n/g,"")));
+  const content = JSON.parse(Buffer.from(d.content.replace(/\n/g,''), 'base64').toString('utf-8'));
   return { comments: content.comments || [], sha: d.sha };
 }
 
 async function saveComments(comments, sha) {
-  const content = btoa(unescape(encodeURIComponent(
-    JSON.stringify({ comments, updated: new Date().toISOString() })
-  )));
+  const content = Buffer.from(JSON.stringify({ comments, updated: new Date().toISOString() }), 'utf-8').toString('base64');
   const body = { message: "Update survey comments", content };
   if (sha) body.sha = sha;
   const r = await fetch(
