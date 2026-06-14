@@ -6,7 +6,6 @@
 <title>Survey Sentieri</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500&display=swap');
 :root{--bg:#0d1117;--surface:#161b22;--border:#21262d;--text:#e6edf3;--muted:#7d8590;--accent:#3b82f6;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--orange:#f97316;}
@@ -25,7 +24,7 @@ main{padding:14px;max-width:900px;margin:0 auto;}
 #map{height:320px;background:#0d1a24;}
 .elevation-wrap{padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);}
 .elevation-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-#elev-chart{height:120px;display:block;width:100%!important;}
+#elev-chart{height:120px;width:100%;}
 
 /* FORM COMMENTO */
 .comment-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
@@ -83,7 +82,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);
     <div id="map"></div>
     <div class="elevation-wrap">
       <div class="elevation-label">Profilo altimetrico</div>
-      <canvas id="elev-chart" height="120"></canvas>
+      <div id="elev-chart" style="width:100%;height:120px;"></div>
     </div>
   </div>
 
@@ -231,6 +230,86 @@ function renderMap(){
 
   addCommentMarkers();
 }
+
+function addCommentMarkers(){
+  commentMarkers.forEach(m=>map&&map.removeLayer(m));
+  commentMarkers=[];
+  const gpx = gpxData[currentRoute.id];
+  if(!gpx||!map) return;
+
+  const routeComments = allComments.filter(c=>c.route===currentRoute.id);
+  routeComments.forEach(c=>{
+    // Trova coordinate dal km
+    const targetM = c.km*1000;
+    let best=0,bestD=Infinity;
+    gpx.forEach((p,i)=>{const d=Math.abs(p[3]-targetM);if(d<bestD){bestD=d;best=i;}});
+    const p=gpx[best];
+    const color=CAT_COLORS[c.category]||"#888";
+    const emoji=CAT_EMOJI[c.category]||"📌";
+    const icon=L.divIcon({
+      html:`<div class="comment-marker" style="background:${color}22;border-color:${color}">${emoji}</div>`,
+      iconSize:[20,20],iconAnchor:[10,10],className:''
+    });
+    const marker=L.marker([p[0],p[1]],{icon}).addTo(map)
+      .bindPopup(`<strong>${emoji} ${c.subcategory||c.category}</strong><br><span style="font-size:11px">km ${c.km} · ${c.author}</span><br><span style="font-size:12px;margin-top:4px;display:block">${c.text}</span>`);
+    commentMarkers.push(marker);
+  });
+}
+
+function renderChart(){
+  const gpx = gpxData[currentRoute.id];
+  const el = document.getElementById('elev-chart');
+  if(!gpx || !el){ el && (el.innerHTML=''); return; }
+
+  const W = el.clientWidth || 400, H = 120;
+  const pad = {l:36,r:8,t:10,b:20};
+  const iW = W-pad.l-pad.r, iH = H-pad.t-pad.b;
+
+  const eles = gpx.map(p=>p[2]);
+  const kms  = gpx.map(p=>p[3]/1000);
+  const minE = Math.min(...eles), maxE = Math.max(...eles);
+  const minK = 0, maxK = kms[kms.length-1];
+
+  const xp = k => pad.l + (k-minK)/(maxK-minK||1) * iW;
+  const yp = e => pad.t + iH - (e-minE)/(maxE-minE||1) * iH;
+
+  // Costruisci polyline
+  const pts = gpx.map(p=>`${xp(p[3]/1000).toFixed(1)},${yp(p[2]).toFixed(1)}`).join(' ');
+  const fillPts = `${xp(minK)},${pad.t+iH} ` + pts + ` ${xp(maxK)},${pad.t+iH}`;
+
+  // Assi Y
+  const yTicks = 4;
+  let yAxisHtml = '';
+  for(let i=0;i<=yTicks;i++){
+    const e = minE + (maxE-minE)*i/yTicks;
+    const y = yp(e);
+    yAxisHtml += `<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${W-pad.r}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+    yAxisHtml += `<text x="${pad.l-3}" y="${(y+4).toFixed(1)}" text-anchor="end" fill="#7d8590" font-size="9">${Math.round(e)}m</text>`;
+  }
+
+  // Assi X
+  const xTicks = Math.min(6, gpx.length);
+  let xAxisHtml = '';
+  for(let i=0;i<=xTicks;i++){
+    const k = maxK*i/xTicks;
+    const x = xp(k);
+    xAxisHtml += `<text x="${x.toFixed(1)}" y="${H-4}" text-anchor="middle" fill="#7d8590" font-size="9">${k.toFixed(1)}</text>`;
+  }
+
+  el.innerHTML = `<svg width="${W}" height="${H}" style="display:block">
+    <defs>
+      <linearGradient id="eg_${currentRoute.id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${currentRoute.color}" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="${currentRoute.color}" stop-opacity="0.05"/>
+      </linearGradient>
+    </defs>
+    ${yAxisHtml}
+    ${xAxisHtml}
+    <polygon points="${fillPts}" fill="url(#eg_${currentRoute.id})"/>
+    <polyline points="${pts}" fill="none" stroke="${currentRoute.color}" stroke-width="2"/>
+  </svg>`;
+}
+
 
 function addCommentMarkers(){
   commentMarkers.forEach(m=>map&&map.removeLayer(m));
