@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Survey Sentieri</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500&display=swap');
+:root{--bg:#0d1117;--surface:#161b22;--border:#21262d;--text:#e6edf3;--muted:#7d8590;--accent:#3b82f6;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--orange:#f97316;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
+header{background:rgba(22,27,34,0.97);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:12px;backdrop-filter:blur(8px);}
+.logo{font-weight:900;font-size:17px;color:var(--accent);}
+.logo span{color:var(--text);}
+.route-tabs{display:flex;gap:6px;margin-left:auto;}
+.tab{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+main{padding:14px;max-width:900px;margin:0 auto;}
+
+/* MAPPA */
+.map-section{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+#map{height:320px;background:#0d1a24;}
+
+
+/* FORM COMMENTO */
+.comment-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.form-title{font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.form-row.single{grid-template-columns:1fr;}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr;}
+label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:4px;}
+select,input,textarea{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;}
+textarea{resize:vertical;min-height:70px;}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);}
+.submit-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;width:100%;margin-top:8px;transition:opacity 0.15s;}
+.submit-btn:hover{opacity:0.85;}
+.submit-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* COMMENTI */
+.comments-section{margin-bottom:14px;}
+.comments-header{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.filter-btn{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.comment-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative;}
+.comment-card:hover{border-color:rgba(59,130,246,0.4);}
+.comment-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.cat-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.cat-sentiero{background:rgba(59,130,246,0.2);color:#60a5fa;}
+.cat-acqua{background:rgba(34,197,94,0.2);color:#4ade80;}
+.cat-casera{background:rgba(249,115,22,0.2);color:#fb923c;}
+.cat-rete{background:rgba(168,85,247,0.2);color:#c084fc;}
+.cat-pericolo{background:rgba(239,68,68,0.2);color:#f87171;}
+.comment-km{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:600;}
+.comment-sub{font-size:11px;color:var(--muted);}
+.comment-text{font-size:13px;line-height:1.5;color:var(--text);}
+.comment-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.comment-author{font-size:11px;color:var(--muted);}
+.comment-time{font-size:10px;color:rgba(125,133,144,0.6);}
+.delete-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;opacity:0.5;}
+.delete-btn:hover{color:var(--red);opacity:1;}
+.no-comments{text-align:center;padding:30px;color:var(--muted);font-size:13px;}
+
+/* Marker sulla mappa per commenti */
+.comment-marker{width:20px;height:20px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;}
+.leaflet-popup-content-wrapper{background:rgba(22,27,34,0.97);border:1px solid var(--border);color:var(--text);border-radius:8px;}
+.leaflet-popup-tip{background:rgba(22,27,34,0.97);}
+.leaflet-popup-content{margin:10px 12px;font-family:'Inter',sans-serif;font-size:12px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⛰️ Survey <span>Sentieri</span></div>
+  <div class="route-tabs" id="routeTabs"></div>
+</header>
+<main>
+  <div class="map-section">
+    <div id="map"></div>
+
+  </div>
+
+  <div class="comment-form">
+    <div class="form-title">➕ Aggiungi osservazione</div>
+    <div class="form-row triple">
+      <div>
+        <label>Categoria</label>
+        <select id="fCat" onchange="updateSubcats()">
+          <option value="sentiero">🥾 Sentiero</option>
+          <option value="acqua">💧 Acqua</option>
+          <option value="casera">🏠 Casera</option>
+          <option value="rete">📶 Rete telefonica</option>
+          <option value="pericolo">⚠️ Pericolo</option>
+        </select>
+      </div>
+      <div>
+        <label>Dettaglio</label>
+        <select id="fSub"></select>
+      </div>
+      <div>
+        <label>Km sul percorso</label>
+        <input type="number" id="fKm" step="0.1" min="0" placeholder="es. 2.3">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Il tuo nome</label>
+        <input type="text" id="fAuthor" placeholder="Nome (opzionale)">
+      </div>
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>Osservazione</label>
+        <textarea id="fText" placeholder="Descrivi cosa hai trovato..."></textarea>
+      </div>
+    </div>
+    <button class="submit-btn" onclick="submitComment()">💾 Salva osservazione</button>
+  </div>
+
+  <div class="comments-section">
+    <div class="comments-header">
+      <span>Osservazioni salvate</span>
+      <span id="commentCount" style="color:var(--accent)"></span>
+    </div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" onclick="setFilter('all')" data-filter="all">Tutte</button>
+      <button class="filter-btn" onclick="setFilter('sentiero')" data-filter="sentiero">🥾 Sentiero</button>
+      <button class="filter-btn" onclick="setFilter('acqua')" data-filter="acqua">💧 Acqua</button>
+      <button class="filter-btn" onclick="setFilter('casera')" data-filter="casera">🏠 Casera</button>
+      <button class="filter-btn" onclick="setFilter('rete')" data-filter="rete">📶 Rete</button>
+      <button class="filter-btn" onclick="setFilter('pericolo')" data-filter="pericolo">⚠️ Pericolo</button>
+    </div>
+    <div id="commentsList"></div>
+  </div>
+</main>
+
+<script>
+const ROUTES = [
+  { id:"crosetta-venal",  name:"Casera Crosetta e Casera Venal",          color:"#3b82f6", totalKm:3.8 },
+  { id:"stabali-scalet",  name:"Casera Stabali e Casera Scalet Bassa Venal", color:"#22c55e", totalKm:5.5 },
+];
+
+const SUBCATS = {
+  sentiero: ["Facile","Medio","Difficile","Tratto esposto","Segnaletica buona","Segnaletica assente","Traccia evidente","Traccia difficile","Altro"],
+  acqua:    ["Rubinetto","Sorgente","Cascatella","Fontana","Acqua non potabile","Nessuna acqua","Altro"],
+  casera:   ["Buono stato","Stato mediocre","Diruto","Posti letto interni","Porta aperta","Porta chiusa a chiave","Altro"],
+  rete:     ["Segnale pieno","Segnale debole","Nessun segnale","WiFi disponibile","Solo dati","Solo chiamate","Altro"],
+  pericolo: ["Sentiero franato","Ramo caduto","Neve/ghiaccio","Animali","Tratto esposto","Segnalare alla protezione civile","Altro"],
+};
+
+const CAT_COLORS = {
+  sentiero:"#3b82f6", acqua:"#22c55e", casera:"#f97316", rete:"#a855f7", pericolo:"#ef4444"
+};
+const CAT_EMOJI = {
+  sentiero:"🥾", acqua:"💧", casera:"🏠", rete:"📶", pericolo:"⚠️"
+};
+
+let currentRoute = ROUTES[0];
+let gpxData = {};
+let allComments = [];
+let currentFilter = "all";
+let map = null;
+let commentMarkers = [];
+
+// Init tabs
+function initTabs(){
+  const el = document.getElementById("routeTabs");
+  ROUTES.forEach((r,i) => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (i===0?" active":"");
+    btn.textContent = r.name.split(" e ")[0].replace("Casera ","c.ra ");
+    btn.onclick = () => selectRoute(r, btn);
+    el.appendChild(btn);
+  });
+}
+
+async function selectRoute(route, btn){
+  currentRoute = route;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  await loadGPX(route);
+  renderMap();
+  renderComments();
+}
+
+async function loadGPX(route){
+  if(gpxData[route.id]) return;
+  const r = await fetch(`/survey-${route.id}.json`);
+  gpxData[route.id] = await r.json();
+}
+
+function renderMap(){
+  const gpx = gpxData[currentRoute.id];
+  if(!gpx) return;
+
+  if(map){ map.remove(); map=null; commentMarkers=[]; }
+
+  const latlngs = gpx.map(p=>[p[0],p[1]]);
+  const mid = latlngs[Math.floor(latlngs.length/2)];
+  map = L.map('map').setView(mid, 14);
+
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,opacity:0.7}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.25}).addTo(map);
+
+  // Tracciato
+  L.polyline(latlngs,{color:currentRoute.color,weight:4,opacity:1}).addTo(map);
+  L.polyline(latlngs,{color:currentRoute.color,weight:10,opacity:0.15}).addTo(map);
+
+  // Start/End
+  const sIcon = L.divIcon({html:`<div style="width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff"></div>`,iconSize:[12,12],iconAnchor:[6,6],className:''});
+  const eIcon = L.divIcon({html:`<div style="width:12px;height:12px;border-radius:50%;background:#ef4444;border:2px solid #fff"></div>`,iconSize:[12,12],iconAnchor:[6,6],className:''});
+  L.marker(latlngs[0],{icon:sIcon}).addTo(map).bindTooltip("Partenza",{permanent:false});
+  L.marker(latlngs[latlngs.length-1],{icon:eIcon}).addTo(map).bindTooltip("Fine",{permanent:false});
+
+  // Click sulla mappa per auto-compilare km
+  map.on('click', function(e){
+    const lat=e.latlng.lat, lng=e.latlng.lng;
+    let best=0,bestD=Infinity;
+    gpx.forEach((p,i)=>{const d=(p[0]-lat)**2+(p[1]-lng)**2;if(d<bestD){bestD=d;best=i;}});
+    const km = (gpx[best][3]/1000).toFixed(1);
+    document.getElementById('fKm').value = km;
+  });
+
+  addCommentMarkers();
+}
+
+function addCommentMarkers(){
+  commentMarkers.forEach(m=>map&&map.removeLayer(m));
+  commentMarkers=[];
+  const gpx = gpxData[currentRoute.id];
+  if(!gpx||!map) return;
+
+  const routeComments = allComments.filter(c=>c.route===currentRoute.id);
+  routeComments.forEach(c=>{
+    // Trova coordinate dal km
+    const targetM = c.km*1000;
+    let best=0,bestD=Infinity;
+    gpx.forEach((p,i)=>{const d=Math.abs(p[3]-targetM);if(d<bestD){bestD=d;best=i;}});
+    const p=gpx[best];
+    const color=CAT_COLORS[c.category]||"#888";
+    const emoji=CAT_EMOJI[c.category]||"📌";
+    const icon=L.divIcon({
+      html:`<div class="comment-marker" style="background:${color}22;border-color:${color}">${emoji}</div>`,
+      iconSize:[20,20],iconAnchor:[10,10],className:''
+    });
+    const marker=L.marker([p[0],p[1]],{icon}).addTo(map)
+      .bindPopup(`<strong>${emoji} ${c.subcategory||c.category}</strong><br><span style="font-size:11px">km ${c.km} · ${c.author}</span><br><span style="font-size:12px;margin-top:4px;display:block">${c.text}</span>`);
+    commentMarkers.push(marker);
+  });
+}
+
+
+// Carica commenti
+async function loadComments(){
+  const r = await fetch('/api/survey');
+  const d = await r.json();
+  allComments = d.comments || [];
+  renderComments();
+  addCommentMarkers();
+}
+
+function renderComments(){
+  const routeComments = allComments
+    .filter(c => c.route === currentRoute.id)
+    .filter(c => currentFilter==='all' || c.category===currentFilter);
+
+  const el = document.getElementById('commentsList');
+  document.getElementById('commentCount').textContent = routeComments.length + " osservazioni";
+
+  if(!routeComments.length){
+    el.innerHTML = `<div class="no-comments">Nessuna osservazione per questo percorso.<br>Sii il primo a lasciarne una!</div>`;
+    return;
+  }
+
+  el.innerHTML = routeComments.map(c=>{
+    const color = CAT_COLORS[c.category]||"#888";
+    const emoji = CAT_EMOJI[c.category]||"📌";
+    const date  = new Date(c.ts).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="comment-card" id="cc-${c.id}">
+      <div class="comment-meta">
+        <span class="cat-badge cat-${c.category}">${emoji} ${c.category}</span>
+        ${c.subcategory?`<span class="comment-sub">${c.subcategory}</span>`:''}
+        <span class="comment-km">km ${c.km}</span>
+      </div>
+      <div class="comment-text">${esc(c.text)}</div>
+      <div class="comment-footer">
+        <span class="comment-author">— ${esc(c.author||'Anonimo')}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="comment-time">${date}</span>
+          <button class="delete-btn" onclick="deleteComment(${c.id})" title="Elimina">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));
+  renderComments();
+}
+
+async function submitComment(){
+  const btn = document.querySelector('.submit-btn');
+  const text = document.getElementById('fText').value.trim();
+  const km   = document.getElementById('fKm').value;
+  const cat  = document.getElementById('fCat').value;
+  const sub  = document.getElementById('fSub').value;
+  const auth = document.getElementById('fAuthor').value.trim();
+  if(!text){ alert('Scrivi un\'osservazione!'); return; }
+  btn.disabled=true; btn.textContent='Salvataggio...';
+  const r = await fetch('/api/survey',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({route:currentRoute.id, km, category:cat, subcategory:sub, text, author:auth})
+  });
+  const d = await r.json();
+  if(d.ok){
+    document.getElementById('fText').value='';
+    document.getElementById('fKm').value='';
+    await loadComments();
+  }
+  btn.disabled=false; btn.textContent='💾 Salva osservazione';
+}
+
+async function deleteComment(id){
+  if(!confirm('Eliminare questa osservazione?')) return;
+  await fetch('/api/survey',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  await loadComments();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Init
+async function init(){
+  initTabs();
+  await loadGPX(currentRoute);
+  renderMap();
+  await loadComments();
+}
+init();
+</script>
+</body>
+</html>
