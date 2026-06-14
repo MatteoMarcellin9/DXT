@@ -336,38 +336,7 @@ function addCommentMarkers(){
   });
 }
 
-function renderChart(){
-  const gpx = gpxData[currentRoute.id];
-  if(!gpx) return;
-  if(elevChart){elevChart.destroy();elevChart=null;}
-
-  const labels = gpx.map(p=>(p[3]/1000).toFixed(1));
-  const eles   = gpx.map(p=>p[2]);
-  const minE = Math.min(...eles), maxE = Math.max(...eles);
-
-  elevChart = new Chart(document.getElementById('elev-chart'),{
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        data:eles,
-        borderColor:currentRoute.color,
-        borderWidth:2,
-        fill:true,
-        backgroundColor:currentRoute.color+'22',
-        pointRadius:0,tension:0.3
-      }]
-    },
-    options:{
-      responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>`km ${ctx[0].label}`,label:ctx=>`${Math.round(ctx.raw)}m slm`}}},
-      scales:{
-        x:{ticks:{color:'#7d8590',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'km',color:'#7d8590',font:{size:9}}},
-        y:{ticks:{color:'#7d8590',font:{size:9},maxTicksLimit:5,callback:v=>v+'m'},grid:{color:'rgba(255,255,255,0.07)'},suggestedMin:minE-30,suggestedMax:maxE+30}
-      }
-    }
-  });
-}
+// chart handled by SVG renderChart above
 
 // Subcategorie dinamiche
 function updateSubcats(){
